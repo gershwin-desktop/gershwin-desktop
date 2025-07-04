@@ -5,7 +5,7 @@ Gershwin is a desktop environment that brings forward and OS X-like user experei
 
 ## Why Gershwin?
 
-Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encourages **growth of Objective-C and Cocoa-style application development**.  Where Gershwin comes into play is theming, packaging, putting together various settings, solving technical problems, modernizing applications as well providing new ones.  
+Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encourages **growth of Objective-C and Cocoa-style application development**.  Where Gershwin comes into play is theming, packaging, putting together various settings, solving technical problems, modernizing applications as well providing new ones.  Last but not least we are making the effort to contribute back to GNUstep core libs.
 
 ## What does modernization mean?
 
