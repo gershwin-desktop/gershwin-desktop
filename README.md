@@ -9,7 +9,7 @@ Having a Gershwin Desktop Environment community flavor provided by GhostBSD enco
 
 ## What does modernization mean?
 
-It all starts with the Workspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  In System Preferences we only show are themes.  We ship a modern light, and dark theme based on forks with modifications.  We make apps like Terminal have a right side scrollbar, and TextEdit open a new document when launch.  
+It all starts with the Workspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  In System Preferences we only show modern themes.  We ship a modern light, and dark theme.  We make apps like Terminal have a right side scrollbar, and TextEdit open a new document when launched.  These are the just some of the litttle touches than have gone in, and many more will come.
 
 ## What’s NeXT?
 
@@ -19,9 +19,9 @@ We have integration coming to make non GNUstep apps and GNUstep apps use the sam
 
 Gershwin development currently follows **two parallel streams**:
 
-1.) Modernize - Primarily this effort focuses on heavily modifying forks for GWorkspace now dubbed Workspace, and System Preferences.  It also includes modernizing something things that will be carried forward, like TextEdit, Terminal.
+1.) Modernize - Primarily this effort focuses on heavily modifying forks for GWorkspace now dubbed Workspace, and System Preferences.  It also includes modernizing things that will be carried forward, like TextEdit, Terminal.
 
-2.) Rewrite - This stream is where work on new components like Help Viewer take place.  As help viewer is finished it can be brought back to all apps in the Modernize catagory.  Dock, File Manager written from the ground up, other components will replace Workspace.  Settings will replace System Preferences. It also encomposses newly written frameworks to support those efforts.
+2.) Rewrite - This stream is where work on new components like a new Dock, File Manager written from the ground up, and other components will replace Workspace.  Settings will replace System Preferences. It also encomposses newly written frameworks to support those efforts.
 
 ## Installation
 
@@ -43,3 +43,12 @@ For resources to get started with development:
 Vscode or neovim can be used with these for linting
 
 * From GhostBSD pkg install gershwin-developer-tools (TODO make the metapkg)
+
+## FAQ
+
+* What about Swift?  Yes it is coming.  See issue tracker.
+* Will Gershwin ever support Wayland?  Yes.  GNUstep already has experimental wayland support.  
+* Will Gershwin be Wayland only when that happens?  No
+* What window manager is Gershwin using?  XFCE4-WM but a new window manager may be written from scratch at some point.
+* Will a NeXT interface style be supported?  No.  A big reason for this project is to provide alternatives to that which already exist.
+* Will Gershwin team ever consider provding an option for non Macintosh UX style?  Yes a Windows style layout option might be something we develop in the future in collaboration with GhostBSD.
