@@ -15,6 +15,14 @@ It all starts with the Workspace.  A lot of changes were made to provide a good 
 
 We have integration coming to make non GNUstep apps and GNUstep apps use the same global menu system.  We also plan to integrate dock status icon support, and other related features.  We will further integrate GhostBSD solutions for Backup Station, Update Station, Software Station as part of our collaboration with GhostBSD.  Beyond this there is a second parallel stream of development happing to write new components, a new Dock, a Workspace replacement, a System Preferences replacement, a File Manager that leverages ZFS, lower level integrations and frameworks.
 
+## Development Streams
+
+Gershwin development currently follows **two parallel streams**:
+
+1.) Modernize - Primarily this effort focuses on heavily modifying forks for GWorkspace now dubbed Workspace, and System Preferences.  It also includes modernizing something things that will be carried forward, like TextEdit, Terminal.
+
+2.) Rewrite - This stream is where work on new components like Help Viewer take place.  As help viewer is finished it can be brought back to all apps in the Modernize catagory.  Dock, File Manager written from the ground up, other components will replace Workspace.  Settings will replace System Preferences. It also encomposses newly written frameworks to support those efforts.
+
 ## Installation
 
 Prebuilt ISOs will be available via GhostBSD for testing and evaluation.
