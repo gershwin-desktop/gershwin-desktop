@@ -25,7 +25,7 @@ Gershwin development currently follows **two parallel streams**:
 
 ## Installation
 
-Prebuilt ISOs will be available via soon GhostBSD for testing and evaluation.
+Prebuilt ISOs will be available soon via GhostBSD for testing and evaluation.  For now packages can be found in the unstable package repositories after installing GhostBSD.
 
 ## Community Support
 
