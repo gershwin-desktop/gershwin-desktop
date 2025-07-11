@@ -33,7 +33,7 @@ All community support tickets and feature requests should be created through our
 
 ## Contributing
 
-Please see our help wanted section under our GitHub project here, and look for help wanted, good first issues.
+Please see our help wanted section under our [GitHub project](https://github.com/orgs/gershwin-desktop/projects/1).
 
 For resources to get started with development:
 
