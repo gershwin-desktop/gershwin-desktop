@@ -29,7 +29,7 @@ Prebuilt ISOs will be available via GhostBSD for testing and evaluation.
 
 ## Community Support
 
-All community support tickets and feature requests should be created through our community issue tracker here.
+All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
 
 ## Contributing
 
