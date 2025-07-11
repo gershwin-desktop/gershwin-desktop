@@ -7,7 +7,7 @@ Gershwin is a desktop environment that brings forward and OS X-like user experei
 
 Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encourages **growth of Objective-C and Cocoa-style application development**.  Where Gershwin comes into play is theming, packaging, putting together various settings, solving technical problems, modernizing applications as well providing new ones.  Last but not least we are making the effort to contribute back to GNUstep core libs.
 
-## What does modernization mean?
+## What does Gershwin offer?
 
 It all starts with the Workspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  In System Preferences we only show modern themes.  We ship a modern light, and dark theme.  We make apps like Terminal have a right side scrollbar, and TextEdit open a new document when launched.  These are the just some of the litttle touches than have gone in, and many more will come.
 
