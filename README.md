@@ -25,7 +25,7 @@ Gershwin development currently follows **two parallel streams**:
 
 ## Installation
 
-Prebuilt ISOs will be available via GhostBSD for testing and evaluation.
+Prebuilt ISOs will be available via soon GhostBSD for testing and evaluation.
 
 ## Community Support
 
@@ -41,8 +41,6 @@ For resources to get started with development:
 
 * https://github.com/gershwin-desktop/dev-config (each repo contains a copy)
 Vscode or neovim can be used with these for linting
-
-* From GhostBSD pkg install gershwin-developer-tools (TODO make the metapkg)
 
 ## FAQ
 
