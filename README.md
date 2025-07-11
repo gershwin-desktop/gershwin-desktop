@@ -44,7 +44,6 @@ Vscode or neovim can be used with these for linting
 
 ## FAQ
 
-* What about Swift?  Yes it is coming.  See issue tracker.
 * Will Gershwin ever support Wayland?  Yes.  GNUstep already has experimental wayland support.  
 * Will Gershwin be Wayland only when that happens?  No
 * What window manager is Gershwin using?  XFCE4-WM but a new window manager may be written from scratch at some point.
