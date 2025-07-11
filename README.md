@@ -15,14 +15,6 @@ It all starts with the Workspace.  A lot of changes were made to provide a good 
 
 There is a second parallel stream of development happing to write new components, a new Dock, a Workspace replacement, a System Preferences replacement, a File Manager that leverages ZFS, lower level integrations and frameworks.
 
-## Development Streams
-
-Gershwin development currently follows **two parallel streams**:
-
-1.) Modernize - Primarily this effort focuses on heavily modifying forks for GWorkspace now dubbed Workspace, and System Preferences.  It also includes modernizing things that will be carried forward, like TextEdit, Terminal.
-
-2.) Rewrite - This stream is where work on new components like a new Dock, File Manager written from the ground up, and other components will replace Workspace.  Settings will replace System Preferences. It also encomposses newly written frameworks to support those efforts.
-
 ## Installation
 
 Prebuilt ISOs will be available soon via GhostBSD for testing and evaluation.  For now packages can be found in the unstable package repositories after installing GhostBSD.
