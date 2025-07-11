@@ -1,7 +1,7 @@
 # gershwin-desktop
 Gershwin is a desktop environment that brings forward and OS X-like user expereince.  It is available exclusively in GhostBSD as a community flavor.
 
-![Gershwin-07042025](https://github.com/user-attachments/assets/33a0a7bd-8f2b-4d50-ac2c-1d8a8553e4d8)
+![Gershwin-07112025](https://github.com/user-attachments/assets/9d3638c5-5fb1-49d6-9d17-1ea73d809548)
 
 ## Why Gershwin?
 
