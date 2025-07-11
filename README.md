@@ -39,8 +39,7 @@ For resources to get started with development:
 
 * http://developer.gnustep.org/
 
-* https://github.com/gershwin-desktop/dev-config (each repo contains a copy)
-Vscode or neovim can be used with these for linting
+* https://github.com/gershwin-desktop/dev-config
 
 ## FAQ
 
