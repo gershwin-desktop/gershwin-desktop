@@ -13,7 +13,7 @@ It all starts with the Workspace.  A lot of changes were made to provide a good 
 
 ## What’s NeXT?
 
-There is a second parallel stream of development happing to write new components, new applications, a new Dock, lower level integrations and frameworks.
+Many more native applications, a tool to browse for them, and install them.  There is a second parallel stream of development happing to write new components, new applications, a new Dock, lower level integrations and frameworks.
 
 ## Installation
 
