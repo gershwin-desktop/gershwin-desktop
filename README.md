@@ -19,6 +19,28 @@ Many more native applications, a tool to browse for them, and install them.  The
 
 Prebuilt ISOs will be available soon via GhostBSD for testing and evaluation.  For now packages can be found in the unstable package repositories after installing GhostBSD.
 
+For the adventurous grab the most recent GhostBSD Mate ISO, configure `/etc/pkg/GhostBSD.conf` to use the unstable repos:
+
+```
+GhostBSD_Unstable: {
+  url: "https://pkg.ghostbsd.org/unstable/${ABI}/latest",
+  enabled: yes
+}
+
+GhostBSD_Unstable_base: {
+  url: "https://pkg.ghostbsd.org/unstable/${ABI}/base",
+  enabled: yes
+}%
+```
+
+Then run the following command to set the session:
+
+```
+sudo pkg install gershwin-desktop
+```
+
+After logging out of Mate you should ses a new Gershwin session in LightDM.
+
 ## Community Support
 
 All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
