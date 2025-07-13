@@ -33,7 +33,7 @@ GhostBSD_Unstable_base: {
 }%
 ```
 
-Then run the following command to set the session:
+Perform a full upgrade of the system, reboot, and then run the following command to install Gershwin:
 
 ```
 sudo pkg install gershwin-desktop
