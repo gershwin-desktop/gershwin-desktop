@@ -39,7 +39,23 @@ Perform a full upgrade of the system, reboot, and then run the following command
 sudo pkg install gershwin-desktop
 ```
 
-After logging out of Mate you should see a new Gershwin session in LightDM.
+The ISO takes care of this but For the best expereince also migrate your home user folder replacing username with your username:
+
+```
+sudo pkg install rsync
+sudo mkdir -p /Users/username
+sudo chown username:username /Users/username
+sudo rsync -avh /home/username/ /Users/username/
+sudo vipw
+```
+Finally change your default shell to /usr/local/bin/zsh or at least change to zsh in Terminal.app preferences if planning to use the terminal.
+
+```
+chsh
+touch .zshrc
+```
+
+After logging out of Mate you should see a new Gershwin session in LightDM.  
 
 ## Community Support
 
