@@ -45,6 +45,8 @@ After logging out of Mate you should see a new Gershwin session in LightDM.
 
 All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
 
+For questions, and other feedback the [Github Discussions](https://github.com/orgs/gershwin-desktop/discussions) is a great place to reach out.  
+
 ## Contributing
 
 Please see our help wanted section under our [GitHub project](https://github.com/orgs/gershwin-desktop/projects/1).
