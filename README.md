@@ -9,7 +9,7 @@ Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encour
 
 ## What does Gershwin offer?
 
-It all starts with the Workspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  In System Preferences we only show modern themes.  We ship a modern light, and dark theme.  We make apps like Terminal have a right side scrollbar, and TextEdit open a new document when launched.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
+It all starts with the Workspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
 
 ## What’s NeXT?
 
