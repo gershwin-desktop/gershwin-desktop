@@ -39,7 +39,7 @@ Perform a full upgrade of the system, reboot, and then run the following command
 sudo pkg install gershwin-desktop
 ```
 
-After logging out of Mate you should ses a new Gershwin session in LightDM.
+After logging out of Mate you should see a new Gershwin session in LightDM.
 
 ## Community Support
 
