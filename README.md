@@ -13,7 +13,7 @@ It all starts with the Workspace.  A lot of changes were made to provide a good 
 
 ## What’s NeXT?
 
-There is a second parallel stream of development happing to write new components, a new Dock, a Workspace replacement, a System Preferences replacement, a File Manager that leverages ZFS, lower level integrations and frameworks.
+There is a second parallel stream of development happing to write new components, a new Dock, lower level integrations and frameworks.
 
 ## Installation
 
