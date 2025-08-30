@@ -17,9 +17,7 @@ Many more native applications, a tool to browse for them, and install them.  The
 
 ## Installation
 
-Prebuilt ISOs will be available soon via GhostBSD for testing and evaluation.  For now packages can be found in the unstable package repositories after installing GhostBSD.
-
-For the truly adventerous here are the [GhostBSD Unstable Instructions](https://github.com/gershwin-desktop/gershwin-desktop/wiki/GhostBSD-Unstable-Instructions) to try out the work in progress.
+Prebuilt ISOs are available via [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  Packaging for other distributions will come in the future as the project matures.
 
 ## Community Support
 
