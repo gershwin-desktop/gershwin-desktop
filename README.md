@@ -9,7 +9,7 @@ Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encour
 
 ## What does Gershwin offer?
 
-Gershwin is a reworking of many existing GNUstep applications.  It all starts with the Workspace which is a fork of GWorkspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a File Viewer does not open.  A user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
+Gershwin is a reworking of many existing GNUstep applications.  It all starts with the Workspace which is a fork of GWorkspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators to open new file viewers when all are closed.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
 
 ## What’s NeXT?
 
