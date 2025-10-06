@@ -19,6 +19,11 @@ Many more native applications, a tool to browse for them, and install them.  Mov
 
 Prebuilt ISOs are available via [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  Packaging for other distributions will come in the future as the project matures.
 
+On an installed GhostBSD system, it is possible to install Gershwin by installed the two following packages:
+```
+ # pkg install gershwin-desktop ghostbsd-gershwin-settings
+```
+
 ## Community Support
 
 All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
