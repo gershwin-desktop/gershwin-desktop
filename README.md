@@ -9,7 +9,7 @@ Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encour
 
 ## What does Gershwin offer?
 
-Gershwin is a reworking of many existing GNUstep applications.  It all starts with the Workspace which is a fork of GWorkspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators to open new file viewers when all are closed.  Apps do not create app icons, or miniturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
+Gershwin is a reworking of many existing GNUstep applications.  It all starts with the Workspace which is a fork of GWorkspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts a user can click System Disk on desktop or click Workspace Icon that shows running in Dock with proper app indicators to open new file viewers when all are closed.  Apps do not create app icons, or miniaturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally some deeper integration with non GNUstep apps is in place, and being actively enhanced.
 
 ## What’s NeXT?
 
@@ -37,7 +37,7 @@ For resources to get started with development:
 
 ## FAQ
 
-* Will Gershwin ever support Wayland?  GNUstep has experimental wayland support and we use it's core libs.   
+* Will Gershwin ever support Wayland?  GNUstep has experimental wayland support and we use its core libs.   
 * Will Gershwin ever be Wayland only?  There will be no effort to make Gershwin wayland only since we use core libs from GNUstep.
-* What window manager is Gershwin using?  XFCE4-WM but this may be replaced by soon by uroswm a native window manager based on xcbkit that is being fixed up to be integrated with Gershwin.  
-* Will Gershwin team ever consider provding an option for non Macintosh UX style?  Yes a Windows style layout option might be something we develop in the future in collaboration with GhostBSD.
+* What window manager is Gershwin using?  XFCE4-WM but this may be replaced soon by uroswm a native window manager based on xcbkit that is being fixed up to be integrated with Gershwin.  
+* Will Gershwin team ever consider providing an option for non Macintosh UX style?  Yes a Windows style layout option might be something we develop in the future in collaboration with GhostBSD.
