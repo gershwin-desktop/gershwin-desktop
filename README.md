@@ -9,7 +9,7 @@ Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encour
 
 ## What does Gershwin offer?
 
-Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, a Global Menu server for GNUstep and X11 apps, and more.  
+Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, a Global Menu server for GNUstep/X11 apps, and more.  
 
 ## Installation
 
