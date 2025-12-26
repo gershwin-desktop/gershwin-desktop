@@ -5,11 +5,11 @@ Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like u
 
 ## Why Gershwin?
 
-Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encourages **growth of Objective-C and Cocoa-style application development**.  Where Gershwin comes into play is theming, packaging, distribution, putting together various settings, solving technical problems, and modernizing applications.
+Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa-style application development** by showcasing a fully native environmnet.  
 
 ## What does Gershwin offer?
 
-Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, a Global Menu server for GNUstep/X11 apps, and more.  
+Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, Global Menu server for GNUstep/X11 apps, and more.  
 
 ## Installation
 
