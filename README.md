@@ -5,7 +5,7 @@ Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like u
 
 ## Why Gershwin?
 
-Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa-style application development** by showcasing a fully native environmnet.  
+Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa-style application development** by showcasing a fully native environmnet GNUstep environment that integrates non native applications.  
 
 ## What does Gershwin offer?
 
