@@ -13,6 +13,7 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 * Local Users and Local Applications are kept seperate from Network Users and Network Applications and System Applications.
 * Users can install Application bundles without root credentials in the Users folder.
 * Applications built using Gershwin and it's underlying GNUstep foundation can run on other many operating systems including Windows.
+* Multiple versions of core libraries can co-exist to guarantee long term ABI stability.
 
 ## Installation and testing
 
