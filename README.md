@@ -20,6 +20,11 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 
 * Testers can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous).
 
+On an installed GhostBSD system, it is possible to install Gershwin by installed the two following packages:
+```
+ # pkg install gershwin-desktop ghostbsd-gershwin-settings
+```
+
 ## Community Support
 
 All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
