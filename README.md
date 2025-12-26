@@ -12,7 +12,7 @@ Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa
 * Gershwin is completely self contained from the underlying operating system
 * Local Users and Local Applications are kept seperate from Network Users and Network Applications and System Applications
 * Users can install Application bundles without root credentials in the Users folder
-* Applications built using Gershwin and it's underlying GNUstep tools can run on other many operating systems including Windows
+* Applications built using Gershwin and it's underlying GNUstep foundation can run on other many operating systems including Windows
 
 ## What does Gershwin offer?
 
