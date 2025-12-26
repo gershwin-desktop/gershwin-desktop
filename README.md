@@ -1,7 +1,7 @@
 # gershwin-desktop
 Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. 
 
-![Gershwin-07112025](https://github.com/user-attachments/assets/9d3638c5-5fb1-49d6-9d17-1ea73d809548)
+<img width="1918" height="1079" alt="Screenshot 2025-12-25 at 11 32 34 PM" src="https://github.com/user-attachments/assets/c28184d2-27e9-4499-aadd-3e6dc7d6e3dc" />
 
 ## Why Gershwin?
 
