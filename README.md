@@ -33,8 +33,6 @@ For resources to get started with development:
 
 * http://developer.gnustep.org/
 
-* https://github.com/gershwin-desktop/dev-config
-
 ## FAQ
 
 * Will Gershwin ever support Wayland?  GNUstep has experimental Wayland support and we use it's core libs.   
