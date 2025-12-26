@@ -5,7 +5,14 @@ Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like u
 
 ## Why Gershwin?
 
-Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa-style application development** by showcasing a fully native environmnet GNUstep environment that integrates non native applications.  
+Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa-style application development** by showcasing a fully native GNUstep environment that integrates non native applications.  
+
+* Gershwin can be built from source code in less than a few minutes on even low spec virtual machines with 1 GB memory 1 CPU
+* The entire system only consumes including Window Manager only consumes under 50MB of storage
+* Gershwin is completely self contained from the underlying operating system
+* Local Users and Local Applications are kept seperate from Network Users and Network Applications and System Applications
+* Users can install Application bundles without root credentials in the Users folder
+* Applications built using Gershwin and it's underlying GNUstep tools can run on other many operating systems including Windows
 
 ## What does Gershwin offer?
 
