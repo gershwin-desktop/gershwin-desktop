@@ -17,8 +17,6 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 
 * Users can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous).
 
-* An older community preivew based on packaging can also be found at GhostBSD [GhostBSD](https://www.ghostbsd.org/download).  
-
 ## Community Support
 
 All community support tickets and feature requests should be created through our [community issue tracker](https://github.com/gershwin-desktop/issues).
