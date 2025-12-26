@@ -1,5 +1,5 @@
 # gershwin-desktop
-Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. It is currently available as a GhostBSD community preview flavor.  Others can install it in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build) or try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous). 
+Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. 
 
 ![Gershwin-07112025](https://github.com/user-attachments/assets/9d3638c5-5fb1-49d6-9d17-1ea73d809548)
 
@@ -9,15 +9,11 @@ Having a Gershwin Desktop Environment community flavor hosted by GhostBSD encour
 
 ## What does Gershwin offer?
 
-Gershwin is a reworking of many existing GNUstep applications.  It all starts with the Workspace, which is a fork of GWorkspace.  A lot of changes were made to provide a good experience without the requirement of using WindowMaker.  When the session starts, a user can click System Disk on the desktop or click Workspace Icon that shows running in Dock with proper app indicators to open new file viewers when all are closed.  Apps do not create app icons or miniaturized windows outside of the dock.  Instead apps are raised currently by clicking an app on the dock.  Additionally, some deeper integration with non-GNUstep apps is in place and being actively enhanced.
-
-## What’s NeXT?
-
-Many more native applications, a tool to browse for them, and install them.  Moving more components to Objective-C.
+Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, a Global Menu server for GNUstep and X11 apps, and more.  
 
 ## Installation
 
-Prebuilt ISOs are available via [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  Packaging for other distributions will come in the future as the project matures.
+Gershwin can be installed in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build).  For the most up to date ISO users can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous).  An older community preivew can also be found at GhostBSD where live ISOs are also available via [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  
 
 ## Community Support
 
