@@ -34,6 +34,4 @@ For resources to get started with development:
 ## FAQ
 
 * Will Gershwin ever support Wayland?  GNUstep has experimental Wayland support and we use it's core libs.   
-* Will Gershwin ever be Wayland only?  There will be no effort to make Gershwin Wayland only since we use core libs from GNUstep.
-* What window manager is Gershwin using?  XFCE4-WM, but this may be replaced by soon by uroswm, a native window manager based on xcbkit that is being fixed up to be integrated with Gershwin.  
-* Will the Gershwin team ever consider providing an option for non Macintosh UX style?  Yes, a Windows-style layout option might be something we develop in the future in collaboration with GhostBSD.
+* Will Gershwin ever be Wayland only?  There will be no effort to make Gershwin Wayland only since we use core libs from GNUstep which continue to support X11.
