@@ -8,7 +8,7 @@ Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like u
 Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, Global Menu server for GNUstep/X11 apps, and more. 
 
 * Gershwin can be built from source code in less than a few minutes on even low spec virtual machines with 1 GB memory 1 CPU
-* The entire system only consumes including Window Manager only consumes under 50MB of storage
+* The entire system including Window Manager only consumes under 50MB of storage
 * Gershwin is completely self contained from the underlying operating system
 * Local Users and Local Applications are kept seperate from Network Users and Network Applications and System Applications
 * Users can install Application bundles without root credentials in the Users folder
