@@ -1,5 +1,5 @@
 # gershwin-desktop
-Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. It is currently available as a GhostBSD community preview flavor.  Others can install it in under a few minutes by using (gershwin-build)(https://github.com/gershwin-desktop/gershwin-build) or try a (gershwin-on-debian iso)([https://github.com/gershwin-desktop/gershwin-on-debian](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous). 
+Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. It is currently available as a GhostBSD community preview flavor.  Others can install it in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build) or try a [gershwin-on-debian live iso]((https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous). 
 
 ![Gershwin-07112025](https://github.com/user-attachments/assets/9d3638c5-5fb1-49d6-9d17-1ea73d809548)
 
