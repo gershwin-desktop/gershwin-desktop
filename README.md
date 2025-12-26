@@ -33,8 +33,3 @@ Please see our help wanted section under our [GitHub project](https://github.com
 For resources to get started with development:
 
 * http://developer.gnustep.org/
-
-## FAQ
-
-* Will Gershwin ever support Wayland?  GNUstep has experimental Wayland support and we use it's core libs.   
-* Will Gershwin ever be Wayland only?  There will be no effort to make Gershwin Wayland only since we use core libs from GNUstep which continue to support X11.
