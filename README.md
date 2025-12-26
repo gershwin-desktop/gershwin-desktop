@@ -1,9 +1,6 @@
 # gershwin-desktop
 Gershwin is a desktop environment based on GNUstep with an early Mac OS X-like user experience. It is currently available as a GhostBSD community flavor.
 
-<img width="563" height="229" alt="image" src="https://github.com/user-attachments/assets/5ab8746b-db42-4d43-8da2-d7c742544c1b" />
-
-
 ![Gershwin-07112025](https://github.com/user-attachments/assets/9d3638c5-5fb1-49d6-9d17-1ea73d809548)
 
 ## Why Gershwin?
