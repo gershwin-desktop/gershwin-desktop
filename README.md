@@ -11,13 +11,13 @@ Gershwin Desktop Environment aims to encourage **growth of Objective-C and Cocoa
 
 Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Window Manager for X11 apps, Global Menu server for GNUstep/X11 apps, and more.  
 
-## Installation
+## Installation and testing
 
-Gershwin can be installed in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build).
+* Gershwin can be installed in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build).
 
-Or users can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous).
+* Users can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous).
 
-An older community preivew can also be found at GhostBSD where live ISOs are also available via [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  
+* An older community preivew can also be found at GhostBSD [GhostBSD](https://www.ghostbsd.org/download) for testing and evaluation.  
 
 ## Community Support
 
