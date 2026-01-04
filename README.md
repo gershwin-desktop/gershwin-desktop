@@ -10,9 +10,9 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 * Gershwin can be built from source code in less than a few minutes using a First-class Clang/LLVM toolchain.
 * The entire system including Window Manager only consumes under 50MB of storage.
 * Gershwin is completely self contained from the underlying operating system.
-* Local Users and Local Applications are kept seperate from Network Users and Network Applications and System Applications.
+* Local Users and Local Applications are kept separate from Network Users and Network Applications and System Applications.
 * Users can install Application bundles without root credentials in the Users folder.
-* Applications built using Gershwin and it's underlying GNUstep foundation can run on other many operating systems including Windows.
+* Applications built using Gershwin and its underlying GNUstep foundation can run on other many operating systems including Windows.
 * Multiple versions of core libraries can co-exist to guarantee long term ABI stability.
 
 ## Installation and testing
