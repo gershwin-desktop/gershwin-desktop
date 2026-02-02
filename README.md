@@ -20,12 +20,12 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 
 * Gershwin can be installed in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build).
 
+* Testers can try a [gershwin-on-ghostbsd live iso](https://github.com/gershwin-desktop/gershwin-on-ghostbsd/releases/tag/continuous) (most up to date), [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous), or [gershwin-on-arch live iso](https://github.com/gershwin-desktop/gershwin-on-arch/releases/tag/continuous), or the [GhostBSD Gershwin Community Preview live iso](https://www.ghostbsd.org/download).
+
 * GhostBSD users can also install Gershwin by installing following package (currently not up to date):
 ```
  # pkg install gershwin-desktop
 ```
-
-* Testers can try a [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous) (most up to date), or [gershwin-on-arch live iso](https://github.com/gershwin-desktop/gershwin-on-arch/releases/tag/continuous), or the [GhostBSD Gershwin Community Preview live iso](https://www.ghostbsd.org/download).
 
 ## Community Support
 
