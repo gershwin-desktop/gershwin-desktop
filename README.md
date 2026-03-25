@@ -2,7 +2,7 @@
 
 Gershwin is a desktop environment based on GNUstep welcoming to switchers.
 
-<img width="1920" height="1080" alt="gershwin-20260129" src="https://github.com/user-attachments/assets/c20330bd-55a2-4a41-a4ec-df6d488a5246" />
+![2026-03-24 23 38 47](https://github.com/user-attachments/assets/d61c8a50-ae9b-4320-9937-0fb22455176e)
 
 ## Why Gershwin?
 
