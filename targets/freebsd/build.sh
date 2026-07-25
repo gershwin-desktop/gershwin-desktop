@@ -407,6 +407,18 @@ prepare_boot_env() {
 
 generate_iso() {
     log "Creating live image (uzip)..."
+    # Drop the remote repository catalogues before they get baked in. `pkg clean`
+    # above only empties PKG_CACHEDIR (/var/cache/pkg, the downloaded tarballs);
+    # the catalogues live under PKG_DBDIR (/var/db/pkg/repos/<repo>/db) and it
+    # never touches them. They are pure build residue -- pkg refetches them on
+    # the installed system (REPO_AUTOUPDATE defaults to YES, so any install /
+    # fetch / search rebuilds them; `pkg update` does it explicitly). Leaving
+    # them in cost 3.3 GiB uncompressed / ~446 MiB in the uzip once the upstream
+    # `latest` catalogue grew 71 MiB -> 1.66 GiB, and we ship it twice: once as
+    # FreeBSD_pkg (our config) and once as FreeBSD-ports (the stock in-image
+    # /etc/pkg/FreeBSD.conf). NOTE: local.sqlite -- the installed-package
+    # registry -- also lives in PKG_DBDIR and MUST stay; only repos/ goes.
+    rm -rf "${RELEASE_DIR}/var/db/pkg/repos"
     # --- ISO SIZE REPORT (exact, uncompressed): every installed package by
     #     flatsize + the biggest directories that ship in the rootfs. This is the
     #     ground truth for what inflates the image (the pkg logs only show

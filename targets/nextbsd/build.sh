@@ -270,6 +270,17 @@ chroot "$ROOTFS" /bin/sh -c '. /System/Library/Makefiles/GNUstep.sh && dscli ini
 echo "==> pkg clean: purge cached package tarballs from the rootfs"
 chroot "$ROOTFS" /bin/sh -eu -c 'pkg clean -ay' || true
 
+# ...and the remote repository catalogues, which `pkg clean` does NOT remove: it
+# only empties PKG_CACHEDIR (/var/cache/pkg), while the catalogues sit under
+# PKG_DBDIR (/var/db/pkg/repos/<repo>/db). Same build residue, same reasoning as
+# the tarballs -- nothing needs them at runtime and pkg refetches them on the
+# installed system (REPO_AUTOUPDATE defaults to YES). On gershwin-on-freebsd
+# these had grown to 1.66 GiB *each* once the upstream `latest` catalogue
+# ballooned, adding ~446 MiB to the compressed image. Path goes through
+# private/ because of the Apple /private layout established in step 3; the
+# installed-package registry (local.sqlite) lives in PKG_DBDIR too and stays.
+rm -rf "$ROOTFS/private/var/db/pkg/repos"
+
 # Deliberately KEEP /Developer (the gershwin-developer clone + its checked-out
 # Library/Sources) baked into the rootfs, exactly as gershwin-on-freebsd does:
 # it rides along in rootfs.uzip -> the rofs lower layer, so the live desktop
