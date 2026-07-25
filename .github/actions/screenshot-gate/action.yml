@@ -119,9 +119,7 @@ runs:
         [ -f tests/qemu.pid ] && kill "$(cat tests/qemu.pid)" 2>/dev/null || true
 
     - name: Upload boot artifacts
-      # Only on failure — these frames/serial logs are for debugging a broken
-      # gate; on success they're just wasted storage.
-      if: ${{ failure() }}
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: boot-artifacts
@@ -130,5 +128,4 @@ runs:
           tests/frames/
           tests/*.ppm
           screenshot/*.png
-        retention-days: 7
         if-no-files-found: ignore

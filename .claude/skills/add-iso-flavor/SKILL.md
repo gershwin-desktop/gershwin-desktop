@@ -25,8 +25,10 @@ source of truth. This skill is the operational checklist and the gotchas.
    `bootstrap.sh` → `BRANCH=$GERSHWIN_BRANCH checkout.sh` → `make install`;
    `dscli init` + auto-login `LoginWindow.plist`; XLibre + a virtio-gpu xorg
    snippet; honors `CHANNEL`, `GERSHWIN_REF`, `GERSHWIN_BRANCH`.
-4. **Artifact hygiene**: keep the `cleanup` job + `retention-days: 1` on the ISO
-   upload; `boot-artifacts` only `if: failure()`. The ISO's home is the release.
+4. **Artifacts are kept**: no `cleanup` job, no `retention-days` on the ISO
+   upload (inherit the repo default); `boot-artifacts` `if: always()`. The ISO
+   also lands on the release, but the artifact is how you get builds over the
+   2 GB release-asset limit and how you diff two builds.
 
 ## How to add a flavor
 
@@ -45,7 +47,7 @@ source of truth. This skill is the operational checklist and the gotchas.
 
 ## Verify loop
 
-- Push to `main`; the flavor's build triggers (build → gate → publish → cleanup).
+- Push to `main`; the flavor's build triggers (build → gate → publish).
   Watch with `gh run list --workflow <wf>.yml` / `gh run view <id> --json conclusion,jobs`.
 - **Changes to shared `build.sh`/actions are no-ops for rc when the new env vars
   are unset** — a green rc proves the plumbing is safe.
@@ -55,7 +57,8 @@ source of truth. This skill is the operational checklist and the gotchas.
   `System Disk=1 Workspace=0` → gate `FAIL(1)`; tracked in
   `gershwin-desktop/gershwin-components#98`, channel-independent).
 - Confirm success: release has `…-<channel>-<stamp>-<arch>.iso` + matching `.png`,
-  and `gh api /repos/<repo>/actions/artifacts` stays near 0 (cleanup working).
+  and `gh api /repos/<repo>/actions/artifacts` lists the run's ISO (downloadable
+  with `gh run download <id>`).
 
 ## Do NOT
 

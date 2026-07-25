@@ -109,11 +109,11 @@ the container choice barely affects build time.
      build environment: env exports (vmactions), `docker -e` (custom container),
      or prepend to the chroot install script (live-build hook / archiso
      `customize_airootfs.sh`). Copy the template's mechanism.
-   - keep the **`cleanup` job** and `retention-days: 1` on the ISO upload (see
-     "Artifact hygiene").
+   - leave the ISO upload without a `retention-days` override and add no
+     `cleanup` job — artifacts are kept (see "Artifacts").
 
 4. **Push and watch.** A flavor's build runs on push to `main`; it goes
-   build → gate → publish → cleanup. Fix real failures; **re-run flakes**
+   build → gate → publish. Fix real failures; **re-run flakes**
    (transient distro-mirror errors; the gdomap menu race —
    `gershwin-desktop/gershwin-components#98`). Confirm the release has the
    channel-named `…-<channel>-<stamp>-<arch>.iso` + matching `.png`.
@@ -149,15 +149,17 @@ Artix is Arch without systemd, so start from **archlinux**:
 - **Currently x86_64/amd64 only.** Dual-arch (aarch64) needs `publish-continuous`
   extended for two ISOs + one x86_64 screenshot.
 
-## Artifact hygiene
+## Artifacts
 
-The ISO artifact (~1.7 GB) is only a **job-handoff** copy — its permanent home is
-the release. Each workflow therefore:
-- sets `retention-days: 1` on the ISO upload (backstop), and
-- has a **`cleanup` job** (`needs: [build, test, publish]`, `if: always()`,
-  `permissions: actions: write`) that deletes the run's ISO + screenshot
-  artifacts once publish has consumed them — keeping storage near zero.
-- uploads `boot-artifacts` (frames/serial) **only on failure**.
+The ISO artifact (~1.7 GB) is uploaded for the job-handoff **and kept** — it is
+the only way to retrieve an ISO that exceeds the 2 GB GitHub release-asset limit,
+and the way to diff two builds byte-for-byte. Each workflow therefore:
+- uploads the ISO with **no `retention-days`** override, so it inherits the
+  repository's default retention (Settings → Actions → *Artifact and log
+  retention*), and
+- has **no `cleanup` job** — nothing deletes a run's artifacts.
+- uploads `boot-artifacts` (frames/serial) with `if: always()`.
 
-Copy these verbatim from the template so a new flavor doesn't re-accumulate
-tens of GB of artifacts.
+This costs real storage: budget roughly *ISO size × runs kept*. If it needs to be
+capped again, lower the repo-wide retention setting rather than re-adding a
+per-workflow purge, so artifacts stay downloadable while a run is recent.
