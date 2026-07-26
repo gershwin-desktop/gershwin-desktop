@@ -1,0 +1,147 @@
+name: dev-debian
+
+# Debian flavor: build -> gate -> publish. Linux family — the ISO is built INSIDE
+# a Debian container (debian:latest, --privileged) with live-build, the pattern
+# every Linux flavor follows (devuan -> devuan, debian -> debian, arch -> arch).
+# Gate + publish are the shared layer. amd64 only for now (arm64 + the RPi .img
+# variant come later, with dual-arch publish support).
+# Trigger: targets/debian/** or shared .github/actions/**; README never builds.
+
+on:
+  push:
+    branches: [main]
+    paths: ['targets/debian/**', '.github/actions/**', '.github/workflows/dev-debian.yml']
+  pull_request:
+    paths: ['targets/debian/**', '.github/actions/**', '.github/workflows/dev-debian.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (debian amd64)
+    runs-on: ubuntu-latest
+    container:
+      image: debian:latest
+      options: --privileged
+      volumes:
+        - /proc:/proc
+    timeout-minutes: 120
+    steps:
+      - name: Install live-build toolchain
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git sudo live-build curl dosfstools parted rsync e2fsprogs kpartx zip \
+            xorriso xz-utils ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Select dev branch for gershwin sources (dev where it exists)
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/gershwin-desktop/gershwin-developer.git dev >/dev/null 2>&1; then REF=dev; else REF=main; fi
+          echo "gershwin-developer ref: $REF"
+          f=targets/debian/config/hooks/normal/010-gnustep.chroot
+          { head -1 "$f"; echo "export GERSHWIN_REF=$REF"; echo "export GERSHWIN_BRANCH=dev"; tail -n +2 "$f"; } > "$f.t" && mv "$f.t" "$f"
+          sed -n '1,6p' "$f"
+
+      - name: Configure + build the live ISO
+        run: |
+          set -e
+          cd targets/debian
+          arch=$(uname -m)
+          sed -i "s/^#${arch} //g" config/package-lists/hardware.list.chroot || true
+          lb config --debian-installer live \
+                    --distribution bookworm \
+                    --archive-areas "main contrib non-free non-free-firmware" \
+                    --initramfs live-boot \
+                    --zsync false \
+                    --mirror-bootstrap http://deb.debian.org/debian/ \
+                    --mirror-chroot http://deb.debian.org/debian/ \
+                    --mirror-binary http://deb.debian.org/debian/ \
+                    --bootappend-live "boot=live components quiet splash"
+          lb build
+          iso_file=$(ls *.iso | head -n 1)
+          out_name="gershwin-on-debian-dev-$(date -u +%Y%m%d%H%M%S)-$(uname -m).iso"
+          mv "$iso_file" "$out_name"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp "$out_name" "$GITHUB_WORKSPACE/out/"
+          ls -lh "$GITHUB_WORKSPACE/out/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gershwin-debian-amd64
+          path: out
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    name: boot + login + screenshot (debian amd64)
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download fresh build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-debian-amd64
+          path: artifacts
+
+      - uses: ./.github/actions/screenshot-gate
+        with:
+          flavor: debian
+          iso-dir: artifacts
+          arch: amd64
+          soft-fail: true
+
+  publish:
+    name: publish debian-dev
+    needs: [build, test]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-debian-amd64
+          path: dist
+
+      - name: Download screenshot
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: screenshot
+
+      - uses: ./.github/actions/publish-continuous
+        with:
+          tag: debian-dev
+          title: Debian (dev)
+          assets-dir: dist
+          screenshot: screenshot/gershwin-on-debian.png
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: purge run ISO artifact
+    needs: [build, test, publish]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete this run's ISO/screenshot artifacts (job-handoff only; ISO is on the release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+          | while read -r id; do
+              gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
+                && echo "deleted artifact $id"
+            done

@@ -1,0 +1,44 @@
+# Runtime packages baked into the Gershwin-on-NextBSD live ISO from the FreeBSD
+# ports repo (pkg.FreeBSD.org). These are runtime prerequisites Gershwin needs
+# but its build (Bootstrap.sh/Checkout.sh/make install) does NOT install itself.
+#
+# Why this file exists: Gershwin requires "xorg or xlibre" (gershwin-developer
+# README) but never installs an X server — it historically relied on the NextBSD
+# base IMAGE bundling XLibre. Since nextbsd-redux/nextbsd rebuilt its image from
+# packages (NextBSD-everything) it no longer ships XLibre, so gershwin-on-nextbsd
+# must bake it in here. The X *client* libs (cairo, libXft, dbus, ...) are
+# already installed into the rootfs by Gershwin's Bootstrap.sh during the chroot
+# build and persist — so the only runtime gap is the X *server* + drivers.
+#
+# pkg resolves each package's full dependency closure automatically. One package
+# per line; blank lines and #-comments are ignored.
+
+# git — so a user on the booted live system can clone gershwin-developer and
+# rebuild/update from source (Gershwin's Bootstrap.sh already pulls git into the
+# rootfs during the chroot build; listed here to match nextbsd's former set).
+git
+
+# sudo — so a user on the booted live system can run administrative commands
+# (FreeBSD base ships no sudo).
+sudo
+
+# X11 (XLibre) — the SAME minimal set nextbsd-redux/nextbsd used to bundle
+# (nextbsd commit 1883bd8/a4d344a, dropped in 3564c03 when its base went lean).
+# A minimal X server + laptop/VM input+video drivers so the desktop can start;
+# NOT the full xlibre/xorg metaport.
+xlibre-minimal
+xlibre-xf86-input-evdev
+xlibre-xf86-input-joystick
+xlibre-xf86-input-keyboard
+xlibre-xf86-input-mouse
+xlibre-xf86-input-synaptics
+xlibre-xf86-input-vmmouse
+xlibre-xf86-video-scfb
+xlibre-xf86-video-vesa
+
+# Mesa DRI drivers (swrast + hardware, e.g. i915/iris) — the GL implementation
+# behind /usr/local/lib/dri/*_dri.so. Gershwin's Bootstrap.sh pulls mesa-libs
+# (libGL/libEGL/libgbm) but mesa-libs does NOT depend on mesa-dri, so without
+# this the X server logs "AIGLX error: dlopen of .../swrast_dri.so failed" and
+# "GLX: no usable GL providers", leaving the desktop with no working OpenGL.
+mesa-dri

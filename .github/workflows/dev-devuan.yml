@@ -1,0 +1,131 @@
+name: dev-devuan
+
+# Devuan flavor: build -> gate -> publish. Linux family — the ISO is built INSIDE
+# the flavor's own distro container (targets/devuan/ci/containers/Dockerfile: a
+# Devuan build environment), the pattern every Linux flavor follows (devuan ->
+# devuan, debian -> debian, arch -> arch). Gate + publish are the shared layer.
+# amd64 only for now; arm64 is a later addition (needs dual-arch publish support).
+# Trigger: targets/devuan/** or shared .github/actions/**; README never builds.
+
+on:
+  push:
+    branches: [main]
+    paths: ['targets/devuan/**', '.github/actions/**', '.github/workflows/dev-devuan.yml']
+  pull_request:
+    paths: ['targets/devuan/**', '.github/actions/**', '.github/workflows/dev-devuan.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (devuan amd64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/free-disk
+
+      - name: Resolve gershwin-developer ref (dev if it exists, else main)
+        id: gd
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/gershwin-desktop/gershwin-developer.git dev >/dev/null 2>&1; then
+            echo "ref=dev" >> "$GITHUB_OUTPUT"; echo "gershwin-developer: using dev branch"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"; echo "gershwin-developer: no dev branch — using main"
+          fi
+
+      - name: Build the Devuan build-environment container
+        run: docker build --build-arg TARGETARCH=amd64 -t gershwin-devuan-build targets/devuan/ci/containers
+
+      - name: Build ISO inside the Devuan container
+        run: |
+          set -e
+          # build.sh reads packages.list/grub.cfg from its own dir and writes the
+          # ISO there; it needs root + mount (debootstrap/chroot) -> --privileged.
+          docker run --privileged --rm -v "$PWD:/repo" -w /repo/targets/devuan \
+            -e GERSHWIN_REF=${{ steps.gd.outputs.ref }} -e GERSHWIN_BRANCH=dev \
+            -e CHANNEL=dev gershwin-devuan-build sh -ec './build.sh'
+          mkdir -p out
+          sudo cp targets/devuan/gershwin-on-devuan-*.iso out/
+          sudo chown "$(id -u):$(id -g)" out/*.iso
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gershwin-devuan-amd64
+          path: out
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    name: boot + login + screenshot (devuan amd64)
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download fresh build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-devuan-amd64
+          path: artifacts
+
+      - uses: ./.github/actions/screenshot-gate
+        with:
+          flavor: devuan
+          iso-dir: artifacts
+          arch: amd64
+          soft-fail: true
+
+  publish:
+    name: publish devuan-dev
+    needs: [build, test]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-devuan-amd64
+          path: dist
+
+      - name: Download screenshot
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: screenshot
+
+      - uses: ./.github/actions/publish-continuous
+        with:
+          tag: devuan-dev
+          title: Devuan (dev)
+          assets-dir: dist
+          screenshot: screenshot/gershwin-on-devuan.png
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: purge run ISO artifact
+    needs: [build, test, publish]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete this run's ISO/screenshot artifacts (job-handoff only; ISO is on the release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+          | while read -r id; do
+              gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
+                && echo "deleted artifact $id"
+            done

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -ex
+
+sed -i -e 's|non-free|non-free non-free-firmware|g' /etc/apt/sources.list
+sudo apt-get update
+sudo apt-get -y install firmware-iwlwifi firmware-amd-graphics firmware-linux-nonfree firmware-misc-nonfree firmware-realtek # TODO: Possibly need more

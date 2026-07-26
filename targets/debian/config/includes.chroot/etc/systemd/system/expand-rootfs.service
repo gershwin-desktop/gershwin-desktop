@@ -1,0 +1,12 @@
+[Unit]
+Description=Expand root filesystem to fill media on first boot
+After=systemd-remount-fs.service local-fs.target
+ConditionPathExists=!/var/lib/expand-rootfs.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/expand-rootfs-on-first-boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

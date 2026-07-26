@@ -1,0 +1,147 @@
+name: dev-freebsd
+
+# FreeBSD flavor: build -> gate -> publish, on EVERY run. Same shared layer as
+# nextbsd (free-disk, screenshot-gate, publish-continuous); only the inline build
+# differs — FreeBSD base+ports and rc.d overlays instead of NextBSD-everything +
+# launchd. Trigger: targets/freebsd/** or shared .github/actions/**; README never builds.
+# No "reuse the last ISO" fast path — the gate boots the freshly built ISO.
+
+on:
+  push:
+    branches: [main]
+    paths: ['targets/freebsd/**', '.github/actions/**', '.github/workflows/dev-freebsd.yml']
+  pull_request:
+    paths: ['targets/freebsd/**', '.github/actions/**', '.github/workflows/dev-freebsd.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (freebsd amd64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/free-disk
+
+      - name: Resolve gershwin-developer ref (dev if it exists, else main)
+        id: gd
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/gershwin-desktop/gershwin-developer.git dev >/dev/null 2>&1; then
+            echo "ref=dev" >> "$GITHUB_OUTPUT"; echo "gershwin-developer: using dev branch"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"; echo "gershwin-developer: no dev branch — using main"
+          fi
+
+      - name: Build ISO inside FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "15.0"
+          usesh: true
+          sync: rsync
+          copyback: true
+          cpu: 4
+          mem: 8192
+          prepare: |
+            pkg install -y git-lite zsync wget bash zip librsvg2 ca_root_nss transmission-cli fdupes
+          run: |
+            set -e
+            kldload zfs || true
+            kldload tmpfs || true
+            kldload nullfs || true
+            kldload geom_uzip || true
+            mkdir -p /usr/local/freebsd-build/uzip /usr/local/freebsd-build/cdroot
+            mount -t tmpfs tmpfs /usr/local/freebsd-build/uzip || true
+            mount -t tmpfs tmpfs /usr/local/freebsd-build/cdroot || true
+            export TARGET_VERSION=15
+            export TARGET_ARCH=amd64
+            export CHANNEL=dev
+            export GERSHWIN_REF=${{ steps.gd.outputs.ref }}
+            export GERSHWIN_BRANCH=dev
+            # build.sh uses CWD="$(pwd)" for its resources/, so run it FROM its
+            # own dir; the ISO output dir (/usr/local/freebsd-build/iso) is
+            # absolute, so the copy below still works from the repo root.
+            ( cd targets/freebsd && /bin/sh ./build.sh )
+            ls -lh /usr/local/freebsd-build/iso/
+            mkdir -p out
+            cp /usr/local/freebsd-build/iso/*.iso out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gershwin-freebsd-amd64
+          path: out
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    name: boot + login + screenshot (freebsd amd64)
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download fresh build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-freebsd-amd64
+          path: artifacts
+
+      - uses: ./.github/actions/screenshot-gate
+        with:
+          flavor: freebsd
+          iso-dir: artifacts
+          arch: amd64
+          soft-fail: true
+
+  publish:
+    name: publish freebsd-dev
+    needs: [build, test]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-freebsd-amd64
+          path: dist
+
+      - name: Download screenshot
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: screenshot
+
+      - uses: ./.github/actions/publish-continuous
+        with:
+          tag: freebsd-dev
+          title: FreeBSD (dev)
+          assets-dir: dist
+          screenshot: screenshot/gershwin-on-freebsd.png
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: purge run ISO artifact
+    needs: [build, test, publish]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete this run's ISO/screenshot artifacts (job-handoff only; ISO is on the release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+          | while read -r id; do
+              gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
+                && echo "deleted artifact $id"
+            done

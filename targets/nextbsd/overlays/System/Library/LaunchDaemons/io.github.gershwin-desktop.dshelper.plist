@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Gershwin DirectoryServices daemon (user/group/auth lookups). Registers via
+  GNUstep Distributed Objects through gdomap, so no MachServices/Sockets. If it
+  starts before gdomap is ready it exits and KeepAlive retries until gdomap is up.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.gershwin-desktop.dshelper</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/System/Library/Tools/dshelper</string>
+        <string>-d</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>

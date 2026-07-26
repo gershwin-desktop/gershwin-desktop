@@ -1,0 +1,30 @@
+curl
+lsb-release
+tar
+sudo
+xterm
+git
+wget
+nano
+
+# At least one shell must be installed or else GNUstep fails to compile
+bash
+
+# Brings up xterm on X11 on boot by default
+xinit
+
+# killall
+psmisc
+
+# xkill
+x11-utils
+
+# automounter; running 'devmon' will automount removable drives
+udevil
+sshfs
+
+# Sharing
+openssh-server
+
+libao4
+libao-dev

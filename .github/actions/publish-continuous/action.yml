@@ -1,0 +1,128 @@
+name: publish-continuous
+description: >
+  Publish a flavor's ISO to its single rolling `continuous-<flavor>` release,
+  PRESERVING the tag. Uploads the new ISO + its matching-named screenshot first,
+  then deletes the previous build's ISO and screenshot — so the release is never
+  left without a valid image. No sha256 sidecars: GitHub shows each asset's digest.
+
+inputs:
+  tag:
+    description: Rolling release tag to publish to (e.g. continuous-nextbsd).
+    required: true
+  assets-dir:
+    description: Directory holding the built *.iso asset(s).
+    required: true
+  screenshot:
+    description: >
+      Path to the gate's screenshot (gershwin-on-<flavor>.png). It is RENAMED to
+      match the ISO (same stem, .png) and rotates with it. Embedded inline in the
+      release body. Optional — skipped if the file is absent.
+    required: false
+    default: ''
+  title:
+    description: Release title.
+    required: false
+    default: Continuous build
+  token:
+    description: Token for gh (pass the caller's GITHUB_TOKEN secret).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Publish rolling continuous release (preserve tag, rotate ISO)
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        TAG='${{ inputs.tag }}'
+        cd "${{ inputs.assets-dir }}"
+
+        isos=(*.iso)
+        [ ${#isos[@]} -gt 0 ] || { echo "::error::no *.iso in ${{ inputs.assets-dir }}"; ls -laR .; exit 1; }
+        iso_name="${isos[0]}"
+        iso_base="${iso_name%.iso}"
+
+        # The screenshot is renamed to match the ISO exactly (same stem, .png), so
+        # it rotates WITH the ISO — new one uploaded first, old one pruned after.
+        # Its URL therefore changes every build, just like the ISO's.
+        shot="${{ github.workspace }}/${{ inputs.screenshot }}"
+        shot_name=""
+        if [ -n "${{ inputs.screenshot }}" ] && [ -f "$shot" ]; then
+          shot_name="${iso_base}.png"
+          cp "$shot" "./$shot_name"
+        fi
+
+        # 1. Ensure the rolling release + tag exist. Create ONCE (never
+        #    --cleanup-tag) so the tag is preserved across every later build.
+        if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          echo "==> creating rolling release $TAG"
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "${{ inputs.title }}" \
+            --notes "initializing…" \
+            --prerelease
+        fi
+
+        # 2. Upload the NEW ISO + screenshot. Clear the exact target names first —
+        #    a re-run can leave a half-uploaded asset that makes --clobber return
+        #    HTTP 422 "already_exists" — then upload with one retry. Tolerate a
+        #    failure here (set +e) so the reconcile in step 3 still runs: a failed
+        #    upload must NEVER skip cleanup (that is what let old assets pile up).
+        upload=("${isos[@]}")
+        [ -n "$shot_name" ] && upload+=("$shot_name")
+        for n in "${upload[@]}"; do
+          gh release delete-asset "$TAG" "$n" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+        done
+        echo "==> uploading: ${upload[*]}"
+        set +e
+        gh release upload "$TAG" "${upload[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+        rc=$?
+        if [ "$rc" -ne 0 ]; then
+          echo "==> upload failed (rc=$rc); retrying once after 10s…"; sleep 10
+          gh release upload "$TAG" "${upload[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+        fi
+        set -e
+
+        # 3. Reconcile against what ACTUALLY landed (never trust the upload blindly).
+        present=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+        if printf '%s\n' "$present" | grep -qxF "$iso_name"; then
+          # the new ISO is up -> prune every asset that is NOT one we just uploaded
+          # (old ISO, old screenshots, orphaned PNGs, legacy *.sha256).
+          keep=" ${upload[*]} "
+          printf '%s\n' "$present" | while IFS= read -r a; do
+            [ -n "$a" ] || continue
+            case "$keep" in *" $a "*) continue ;; esac
+            echo "==> deleting stale asset $a"
+            gh release delete-asset "$TAG" "$a" --repo "$GITHUB_REPOSITORY" --yes
+          done
+        else
+          # the ISO never landed -> drop the orphan screenshot so it can't
+          # accumulate, keep the previous release intact, and fail loudly.
+          echo "::error::ISO '$iso_name' did not upload — keeping the previous assets, removing orphan screenshot, failing."
+          [ -n "$shot_name" ] && gh release delete-asset "$TAG" "$shot_name" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+          exit 1
+        fi
+
+        # 4. Refresh the body: inline screenshot, then any recorded gate failures
+        #    (dev soft-fail — rendered as red text UNDER the image), then the log.
+        run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        fail_file="${{ github.workspace }}/screenshot/gate-failures.txt"
+        {
+          if [ -n "$shot_name" ]; then
+            printf '![%s](%s/%s/releases/download/%s/%s)\n\n' \
+              "$iso_base" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$TAG" "$shot_name"
+          fi
+          if [ -s "$fail_file" ]; then
+            printf '### ❌ Gate failures (dev channel — not blocking)\n\n'
+            printf '```diff\n'
+            sed 's/^/- /' "$fail_file"
+            printf '```\n\n'
+          fi
+          printf '**Build log:** %s\n' "$run_url"
+        } > notes.md
+        gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "${{ inputs.title }}" --notes-file notes.md

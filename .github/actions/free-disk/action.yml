@@ -1,0 +1,21 @@
+name: free-disk
+description: >
+  Reclaim ~25 GB on an ubuntu-latest runner so a ~2 GiB ISO can be staged and
+  copied back out of the build VM. Shared by every flavor's build job.
+
+runs:
+  using: composite
+  steps:
+    # Every flavor's build does MORE than a stock image (full package install +
+    # a from-source Gershwin/GNUstep compile), so free aggressively. Keep
+    # docker/swap in place — the vmactions provider and copyback still need them.
+    - name: Free up host disk
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: false
+        docker-images: false
+        swap-storage: false

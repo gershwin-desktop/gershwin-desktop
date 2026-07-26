@@ -1,0 +1,47 @@
+#!/bin/bash
+set -ex
+
+exit 0 # It is not working yet
+
+#####################################################################
+
+# https://wiki.debian.org/NvidiaGraphicsDrivers#Version_535.183.01-1
+
+# Need some trickery on GitHub Actions to ensure that it doesn't build
+# for a kernel version like 6.11.0-1018-azure that belongs to a chroot's host
+# instead of the chroot
+
+# Also see
+# https://github.com/NVIDIA/open-gpu-kernel-modules/issues/555#issuecomment-1709231958
+# "It should be better documented, but you can use the SYSSRC and SYSOUT variables
+# to tell the build where to find the kernel sources and build output"
+
+# Detect target kernel version
+if [ -d /lib/modules ]; then
+    TARGET_KERNEL=$(ls -1 /lib/modules | head -n 1)
+elif [ -e /boot/vmlinuz-* ]; then
+    TARGET_KERNEL=$(basename /boot/vmlinuz-*)
+else
+    echo "Could not detect target kernel version"
+    exit 1
+fi
+
+export SYSSRC=/usr/src/kernels/TARGET_KERNEL
+export SYSOUT=$SYSSRC
+
+apt-get install -y linux-headers-amd64
+
+# Fake uname -r to point to target kernel version
+mkdir -p /tmp/fakeuname
+cat > /tmp/fakeuname/uname <<EOF
+#!/bin/sh
+if [ "\$1" = "-r" ]; then
+    echo "$TARGET_KERNEL"
+else
+    /usr/bin/uname "\$@"
+fi
+EOF
+chmod +x /tmp/fakeuname/uname
+export PATH="/tmp/fakeuname:$PATH"
+
+sudo apt-get -y install nvidia-driver

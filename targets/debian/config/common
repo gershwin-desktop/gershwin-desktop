@@ -1,0 +1,141 @@
+# config/common - common options for live-build(7)
+
+# LB_CONFIG_VERSION: internal version of the configuration file format
+LB_CONFIG_VERSION="3.0~a57"
+
+# $LB_APT: set package manager
+# (Default: apt)
+LB_APT="apt"
+
+# $LB_APT_FTP_PROXY: set apt/aptitude ftp proxy
+# (Default: autodetected or empty)
+LB_APT_FTP_PROXY=""
+
+# $LB_APT_HTTP_PROXY: set apt/aptitude http proxy
+# (Default: autodetected or empty)
+LB_APT_HTTP_PROXY=""
+
+# $LB_APT_PIPELINE: set apt/aptitude pipeline depth
+# (Default: )
+LB_APT_PIPELINE=""
+
+# $LB_APT_RECOMMENDS: set apt/aptitude recommends
+# (Default: true)
+LB_APT_RECOMMENDS="true"
+
+# $LB_APT_SECURE: set apt/aptitude security
+# (Default: true)
+LB_APT_SECURE="true"
+
+# $LB_APT_SOURCE_ARCHIVES: set apt/aptitude source entries in sources.list
+# (Default: true)
+LB_APT_SOURCE_ARCHIVES="true"
+
+# $LB_BOOTSTRAP: set bootstrap program
+# (Default: debootstrap)
+LB_BOOTSTRAP="debootstrap"
+
+# $LB_CACHE: control cache
+# (Default: true)
+LB_CACHE="true"
+
+# $LB_CACHE_INDICES: control if downloaded package indices should be cached
+# (Default: false)
+LB_CACHE_INDICES="false"
+
+# $LB_CACHE_PACKAGES: control if downloaded packages files should be cached
+# (Default: true)
+LB_CACHE_PACKAGES="true"
+
+# $LB_CACHE_STAGES: control if completed stages should be cached
+# (Default: bootstrap)
+LB_CACHE_STAGES="bootstrap"
+
+# $LB_DEBCONF_FRONTEND: set debconf(1) frontend to use
+# (Default: noninteractive)
+LB_DEBCONF_FRONTEND="noninteractive"
+
+# $LB_DEBCONF_NOWARNINGS: set debconf(1) warnings
+# (Default: yes)
+LB_DEBCONF_NOWARNINGS="yes"
+
+# $LB_DEBCONF_PRIORITY: set debconf(1) priority to use
+# (Default: critical)
+LB_DEBCONF_PRIORITY="critical"
+
+# $LB_INITRAMFS: set initramfs hook
+# (Default: auto)
+LB_INITRAMFS="auto"
+
+# $LB_INITRAMFS_COMPRESSION: set initramfs compression
+# (Default: )
+LB_INITRAMFS_COMPRESSION=""
+
+# $LB_INITSYSTEM: set init system
+# (Default: )
+LB_INITSYSTEM=""
+
+# $LB_FDISK: set fdisk program
+# (Default: autodetected)
+LB_FDISK="fdisk"
+
+# $LB_LOSETUP: set losetup program
+# (Default: autodetected)
+LB_LOSETUP="losetup"
+
+# $LB_MODE: set distribution mode
+# (Default: ubuntu)
+LB_MODE="debian"
+
+# $LB_SYSTEM: set system type
+# (Default: live)
+LB_SYSTEM="live"
+
+# $LB_ROOT_COMMAND: use sudo or equivalent
+# (Default: empty)
+#LB_ROOT_COMMAND="sudo"
+
+# $LB_USE_FAKEROOT: use fakeroot/fakechroot
+# (Default: false)
+LB_USE_FAKEROOT="false"
+
+# $LB_TASKSEL: set tasksel program
+# (Default: apt)
+LB_TASKSEL="apt"
+
+# $LB_TEMPLATES: set templates
+# (Default: /usr/share/live/build/templates)
+LB_TEMPLATES="/usr/share/live/build/templates"
+
+# live-build options
+
+# $_BREAKPOINTS: enable breakpoints
+# (Default: false)
+#_BREAKPOINTS="false"
+
+# $_DEBUG: enable debug
+# (Default: false)
+#_DEBUG="false"
+
+# $_COLOR: enable color
+# (Default: false)
+#_COLOR="false"
+
+# $_FORCE: enable force
+# (Default: false)
+#_FORCE="false"
+
+# $_QUIET: enable quiet
+# (Default: false)
+_QUIET="false"
+
+# $_VERBOSE: enable verbose
+# (Default: false)
+#_VERBOSE="false"
+
+# Internal stuff (FIXME)
+APT_OPTIONS="--yes"
+APTITUDE_OPTIONS="--assume-yes"
+GZIP_OPTIONS="-6 --rsyncable"
+ISOHYBRID_OPTIONS=""
+GENISOIMAGE_OPTIONS_EXTRA=""

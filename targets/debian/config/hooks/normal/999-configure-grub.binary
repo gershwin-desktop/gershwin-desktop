@@ -1,0 +1,56 @@
+#!/bin/sh
+set -e
+
+# Hook: detect live kernel/initrd names and populate placeholders in ./boot/grub/grub.cfg
+# Runs outside of chroot during ISO build
+
+cat > ./boot/grub/grub.cfg <<\EOF
+# Keep timeout at zero and avoid menus
+set timeout=0
+set default=0
+# Keep console output minimal
+terminal_output console
+# Source variables like ${iso_path} if available
+if [ -f ./boot/grub/config.cfg ]; then
+  source ./boot/grub/config.cfg
+fi
+linux  /live/vmlinuz-PLACEHOLDER boot=live components quiet splash findiso=${iso_path}
+initrd /live/initrd-PLACEHOLDER
+boot
+EOF
+
+# Prefer most recent files if multiple present
+KERNEL_FILE=$(ls -1 ./live/vmlinuz* 2>/dev/null | sort -V | tail -n1 || true)
+INITRD_FILE=$(ls -1 ./live/initrd* 2>/dev/null | sort -V | tail -n1 || true)
+
+if [ -n "$KERNEL_FILE" ] && [ -f "$KERNEL_FILE" ]; then
+  KERNEL=$(basename "$KERNEL_FILE")
+fi
+
+if [ -n "$INITRD_FILE" ] && [ -f "$INITRD_FILE" ]; then
+  INITRD=$(basename "$INITRD_FILE")
+fi
+
+GRUBCFG=./boot/grub/grub.cfg
+
+if [ -f "$GRUBCFG" ]; then
+  if [ -n "$KERNEL" ]; then
+    sed -i "s|vmlinuz-PLACEHOLDER|$KERNEL|g" "$GRUBCFG"
+  else
+    echo "Error: kernel not detected; leaving vmlinuz-PLACEHOLDER" >&2
+    exit 1
+  fi
+  if [ -n "$INITRD" ]; then
+    sed -i "s|initrd-PLACEHOLDER|$INITRD|g" "$GRUBCFG"
+  else
+    echo "Error: initrd not detected; leaving initrd-PLACEHOLDER" >&2
+    exit 1
+  fi
+else
+  echo "Error: $GRUBCFG not found; skipping kernel replacement" >&2
+  exit 1
+fi
+
+cat "$GRUBCFG"
+
+exit 0

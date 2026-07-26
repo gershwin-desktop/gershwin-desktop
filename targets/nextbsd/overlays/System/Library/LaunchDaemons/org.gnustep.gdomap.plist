@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  GNUstep Distributed Objects port mapper (UDP/TCP 538). Required by dshelper.
+  -f keeps gdomap in the foreground so launchd tracks the real PID; without it
+  gdomap forks, the parent exits, and KeepAlive respawn-loops on the held port.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.gnustep.gdomap</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/System/Library/Tools/gdomap</string>
+        <string>-f</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>

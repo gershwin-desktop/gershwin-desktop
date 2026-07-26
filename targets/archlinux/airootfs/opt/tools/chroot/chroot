@@ -1,0 +1,34 @@
+#! /usr/bin/bash
+lsblk
+read -p "Enter the root partition to mount (e.g sda2): " root
+mount --mkdir "/dev/$root" "/tmp/${root}-mount"
+echo "Mounted $root to /tmp/${root}-mount"
+rootfs=$(df -Th | grep "/dev/$root" -m 1 | awk '{ print $2 }')
+echo "Root partition format: $rootfs"
+if [ "$rootfs" = "btrfs" ]; then
+  # Mount root
+  echo "Btrfs subvolumes: "
+  btrfs subvolume list "/tmp/${root}-mount"
+  read -p "Enter the btrfs subvolume to mount (e.g @): " btrfsroot
+  mount --mkdir "/dev/$root" -o "subvol=$btrfsroot" /mnt
+  echo "Mounted $btrfsroot to /mnt"
+  # Mount home
+  read -p "Enter the btrfs home to mount (e.g @home): " btrfshome
+  mount --mkdir "/dev/$root" -o "subvol=$btrfshome" /mnt/home
+  echo "Mounted $btrfshome to /mnt/home"
+elif [[ "$rootfs" =~ "ext" ]]; then
+  # Umount old mountpoint
+  umount "/tmp/${root}-mount"
+  # Mount root
+  mount --mkdir "/dev/$root" /mnt
+fi
+read -p "Enter the boot partition to mount (e.g sda1): " boot
+if [ "$boot" != "" ]; then
+  mount --mkdir "/dev/$boot" /mnt/boot
+  echo "Mounted $boot to /mnt/boot"
+fi
+echo "Trying to chroot to /mnt"
+arch-chroot /mnt
+echo "Unmounting partitions"
+umount -A --recursive /mnt
+rmdir "/tmp/${root}-mount"

@@ -1,0 +1,129 @@
+name: dev-archlinux
+
+# Arch Linux flavor: build -> gate -> publish. Linux family — the ISO is built
+# INSIDE an Arch container (archlinux:latest, --privileged) with mkarchiso, the
+# per-distro container pattern (devuan -> devuan, debian -> debian, arch -> arch).
+# Flavor token is "archlinux" (not "arch", which collides with the CPU arch).
+# x86_64 only (Arch is x86_64-only). Gate + publish are the shared layer.
+# Trigger: targets/archlinux/** or shared .github/actions/**; README never builds.
+
+on:
+  push:
+    branches: [main]
+    paths: ['targets/archlinux/**', '.github/actions/**', '.github/workflows/dev-archlinux.yml']
+  pull_request:
+    paths: ['targets/archlinux/**', '.github/actions/**', '.github/workflows/dev-archlinux.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (archlinux x86_64)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    timeout-minutes: 120
+    steps:
+      - name: Install archiso
+        run: pacman -Syu --noconfirm archiso git
+
+      - uses: actions/checkout@v4
+
+      - name: Select dev branch for gershwin sources (dev where it exists)
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/gershwin-desktop/gershwin-developer.git dev >/dev/null 2>&1; then REF=dev; else REF=main; fi
+          echo "gershwin-developer ref: $REF"
+          f=targets/archlinux/airootfs/root/customize_airootfs.sh
+          { head -1 "$f"; echo "export GERSHWIN_REF=$REF"; echo "export GERSHWIN_BRANCH=dev"; tail -n +2 "$f"; } > "$f.t" && mv "$f.t" "$f"
+          sed -n '1,6p' "$f"
+
+      - name: Build ISO with mkarchiso
+        run: |
+          set -e
+          df -h
+          mkarchiso -v -w work -o out targets/archlinux
+          iso_file=$(find out -name '*.iso' | head -n 1)
+          out_name="gershwin-on-archlinux-dev-$(date -u +%Y%m%d%H%M%S)-$(uname -m).iso"
+          mkdir -p "$GITHUB_WORKSPACE/dist-iso"
+          cp "$iso_file" "$GITHUB_WORKSPACE/dist-iso/$out_name"
+          ls -lh "$GITHUB_WORKSPACE/dist-iso/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gershwin-archlinux-x86_64
+          path: dist-iso
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    name: boot + login + screenshot (archlinux x86_64)
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download fresh build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-archlinux-x86_64
+          path: artifacts
+
+      - uses: ./.github/actions/screenshot-gate
+        with:
+          flavor: archlinux
+          iso-dir: artifacts
+          arch: amd64
+          soft-fail: true
+
+  publish:
+    name: publish archlinux-dev
+    needs: [build, test]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-archlinux-x86_64
+          path: dist
+
+      - name: Download screenshot
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: screenshot
+
+      - uses: ./.github/actions/publish-continuous
+        with:
+          tag: archlinux-dev
+          title: Arch Linux (dev)
+          assets-dir: dist
+          screenshot: screenshot/gershwin-on-archlinux.png
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: purge run ISO artifact
+    needs: [build, test, publish]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete this run's ISO/screenshot artifacts (job-handoff only; ISO is on the release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+          | while read -r id; do
+              gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
+                && echo "deleted artifact $id"
+            done

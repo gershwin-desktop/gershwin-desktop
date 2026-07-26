@@ -1,0 +1,83 @@
+name: dev-all
+
+# One-click fan-out: dispatch every dev-<flavor> build.
+#
+# The flavor list is DISCOVERED from the Actions API, not hardcoded, so adding a
+# new dev-<flavor>.yml is enough -- there is nothing here to keep in sync. The
+# only requirement on a flavor workflow is that it declares `workflow_dispatch:`
+# (they all do).
+#
+# This dispatches the flavor workflows rather than duplicating their jobs, so
+# each one still reports as its own run with its own artifacts, gate and release
+# -- this workflow only fires the starting gun and exits.
+#
+# GITHUB_TOKEN is enough: events raised with it do not normally start new runs,
+# but workflow_dispatch and repository_dispatch are the documented exceptions.
+# It does need `actions: write`.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    name: dispatch every dev-* build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger each dev-<flavor> workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREFIX: dev-
+          SELF: dev-all.yml
+        run: |
+          set -eu
+
+          # Active workflows only: a deleted-from-main workflow can linger in the
+          # API as "deleted_workflow_state" and must not be dispatched.
+          all=$(gh api "/repos/$GITHUB_REPOSITORY/actions/workflows" --paginate \
+                  --jq '.workflows[] | select(.state == "active") | .path')
+
+          targets=$(printf '%s\n' "$all" \
+                      | sed 's|^\.github/workflows/||' \
+                      | { grep -E "^${PREFIX}" || true; } \
+                      | { grep -vx "$SELF" || true; } \
+                      | sort)
+
+          if [ -z "$targets" ]; then
+              echo "::error::no active ${PREFIX}* workflows found to dispatch"
+              exit 1
+          fi
+
+          echo "Dispatching on ref ${GITHUB_REF_NAME}:"
+          printf '%s\n' "$targets" | sed 's/^/  /'
+          echo
+
+          {
+            echo "### dev-all dispatched \`${GITHUB_REF_NAME}\`"
+            echo
+            echo "| workflow | dispatch |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # --repo is REQUIRED: this job has no actions/checkout, and gh
+          # resolves the repo from the local git remote unless told
+          # otherwise ("fatal: not a git repository"). gh api above is
+          # unaffected because its path is already fully qualified.
+          rc=0
+          for wf in $targets; do
+              if gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"; then
+                  echo "  ok      $wf"
+                  echo "| \`$wf\` | ok |" >> "$GITHUB_STEP_SUMMARY"
+              else
+                  # Keep going: one bad flavor should not strand the rest.
+                  echo "::warning::failed to dispatch $wf"
+                  echo "| \`$wf\` | **FAILED** |" >> "$GITHUB_STEP_SUMMARY"
+                  rc=1
+              fi
+          done
+
+          echo
+          echo "Runs appear under Actions as their own dev-<flavor> entries."
+          exit $rc

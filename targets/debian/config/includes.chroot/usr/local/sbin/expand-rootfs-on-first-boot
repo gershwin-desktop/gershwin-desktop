@@ -1,0 +1,45 @@
+#!/bin/bash
+set -euo pipefail
+
+readonly STATE_FILE='/var/lib/expand-rootfs.done'
+
+if [ -e "$STATE_FILE" ]; then
+  exit 0
+fi
+
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+if [ -z "$ROOT_SOURCE" ] || [ ! -b "$ROOT_SOURCE" ]; then
+  echo "expand-rootfs: root source is not a block device ($ROOT_SOURCE), skipping" >&2
+  exit 0
+fi
+
+DISK_NAME=$(lsblk -n -o PKNAME "$ROOT_SOURCE")
+PART_NUM=$(lsblk -n -o PARTNUM "$ROOT_SOURCE")
+
+if [ -z "$DISK_NAME" ] || [ -z "$PART_NUM" ]; then
+  echo "expand-rootfs: could not determine disk or partition for $ROOT_SOURCE, skipping" >&2
+  exit 0
+fi
+
+DISK_PATH="/dev/$DISK_NAME"
+
+if ! parted -s "$DISK_PATH" resizepart "$PART_NUM" 100%; then
+  echo "expand-rootfs: failed to resize partition backing $ROOT_SOURCE" >&2
+  exit 1
+fi
+if ! partprobe "$DISK_PATH"; then
+  echo "expand-rootfs: partprobe failed for $DISK_PATH" >&2
+  exit 1
+fi
+if ! udevadm settle; then
+  echo "expand-rootfs: udevadm settle failed" >&2
+  exit 1
+fi
+if ! resize2fs "$ROOT_SOURCE"; then
+  echo "expand-rootfs: failed to resize filesystem on $ROOT_SOURCE" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$STATE_FILE")"
+touch "$STATE_FILE"
+systemctl disable expand-rootfs.service || true

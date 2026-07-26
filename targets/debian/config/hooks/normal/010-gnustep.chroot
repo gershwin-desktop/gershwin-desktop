@@ -1,0 +1,43 @@
+#!/bin/bash
+set -ex
+
+# Install grub depending on the architecture; this is needed for the installer inside the ISO
+a=$(uname -m)
+case "$a" in x86_64|i?86)p=grub-pc;;aarch64|arm64)p=grub-efi-arm64;;arm*)p=grub-efi-arm;;*)exit 1;;esac
+case "$a" in x86_64|i?86)p=grub-efi-amd64-bin;;aarch64|arm64)p=grub-efi-arm64-bin;;arm*)p=grub-efi-arm-bin;;*)exit 1;;esac
+apt-get update && apt-get install -y grub2-common "$p"
+
+# https://github.com/gershwin-desktop/gershwin-developer
+git clone -b "${GERSHWIN_REF:-main}" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
+/Developer/Library/Scripts/bootstrap.sh
+PINNED=1 BRANCH="${GERSHWIN_BRANCH:-}" /Developer/Library/Scripts/checkout.sh
+cd /Developer && sudo -E make install
+
+. /System/Library/Makefiles/GNUstep.sh
+
+# Everything that comes with the System should be in /System
+mkdir -p /System/Applications /System/Library/Tools
+sudo mv /Local/Applications/* /System/Applications || true
+sudo mv /Local/Library/Tools/* /System/Library/Tools || true
+
+# Initialize Directory Services (creates built-in admin user with no password)
+dscli init
+
+# Enable services for the live session
+systemctl enable gdomap dshelper loginwindow
+
+# Configure LoginWindow for auto-login
+mkdir -p /Local/Library/Preferences
+cat > /Local/Library/Preferences/LoginWindow.plist <<\EOF
+{
+    lastLoggedInUser = admin;
+    lastSession = "/System/Library/Scripts/Gershwin.sh";
+}
+EOF
+
+# Allow empty password for sshd
+sed -i 's/^[[:space:]#]*PermitEmptyPasswords[[:space:]]*.*/PermitEmptyPasswords yes/' /etc/ssh/sshd_config
+
+# Allow password authentication and empty password for sshd
+sed -i 's/^[[:space:]#]*PasswordAuthentication[[:space:]]*.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/^[[:space:]#]*PermitEmptyPasswords[[:space:]]*.*/PermitEmptyPasswords yes/' /etc/ssh/sshd_config

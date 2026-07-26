@@ -1,0 +1,29 @@
+#!/bin/bash
+set -ex
+
+# FIXME: For now, don't replace Xorg with XLibre as it segfaults when booted in VirtualBox
+exit 0
+
+##########################################################################################
+
+# This installs XLibre (replaces Xorg if already installed)
+
+# For Debian 12 (bookworm) we might need to install libdrm* packages from Debian bookworm-backports repository
+
+cat <<EOF | sudo tee /etc/apt/sources.list.d/debian-backports.sources
+Types: deb deb-src
+URIs: http://deb.debian.org/debian
+Suites: bookworm-backports
+Components: main
+Enabled: yes
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+
+sudo apt-get update
+sudo apt-get install -y -t bookworm-backports 'libdrm*'
+
+# Install xlibre
+sudo apt-get install -y extrepo
+sudo extrepo enable xlibre
+sudo apt-get update
+sudo apt-get install -y xlibre

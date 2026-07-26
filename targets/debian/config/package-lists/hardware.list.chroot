@@ -1,0 +1,33 @@
+live-boot
+live-config
+
+xserver-xorg-video-all
+mesa-utils
+mesa-vulkan-drivers
+libva2
+
+# Needed for Network prefPane
+network-manager
+iw
+wireless-tools
+
+# Needed for Audio prefPane
+alsa-utils
+
+# Everything marked with "#x86_64" (uname -m" will be installed on that architecture only
+#x86_64 xserver-xorg-video-intel
+#x86_64 xserver-xorg-video-amdgpu
+#x86_64 intel-media-va-driver-non-free 
+
+# Proprietary Nvidia drivers
+# https://wiki.debian.org/NvidiaGraphicsDrivers#Version_535.183.01-1
+# Since these fail to install from here, we are doing it in
+# a script...
+
+#aarch64 raspi-firmware
+parted
+
+qemu-guest-agent
+spice-vdagent
+xserver-xorg-video-qxl
+

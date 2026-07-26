@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  D-Bus system message bus. GNUstep/Gershwin components (and much of the X11
+  stack pulled in by Gershwin's Bootstrap.sh) talk to the system bus at
+  /var/run/dbus/system_bus_socket. FreeBSD ships D-Bus with an rc.d(8) script,
+  but launchd is PID 1 on NextBSD and never reads rc.d, so run the daemon
+  directly as a LaunchDaemon instead.
+
+  Flags (see ProgramArguments): "system" starts the system bus (reads
+  /usr/local/etc/dbus-1/system.conf); "nofork" keeps the daemon in the
+  foreground so launchd tracks the real dbus-daemon PID (otherwise dbus forks,
+  the parent exits, and KeepAlive respawn-loops on the held socket); "nopidfile"
+  because launchd owns process supervision.
+
+  We wrap the daemon in
+  `sh -c 'mkdir -p /var/run/dbus && dbus-uuidgen --ensure && exec ...'` because
+  /var is repopulated fresh on every boot (the build-time mkdir and machine-id
+  do NOT survive). Without the dir, dbus-daemon fails to bind
+  /var/run/dbus/system_bus_socket ("No such file or directory"); without the
+  machine-id, it fails to start ("Unable to load /var/lib/dbus/machine-id"). So
+  we recreate both at launch, in order: make the socket dir, then
+  `dbus-uuidgen --ensure` seeds /var/lib/dbus/machine-id (no-op if present),
+  then `exec` starts the daemon and keeps it as launchd's tracked PID. Doing
+  this at launch is self-healing across both boots and respawns; the live
+  overlay makes /var writable.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.freedesktop.dbus-system</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>mkdir -p /var/run/dbus &amp;&amp; /usr/local/bin/dbus-uuidgen --ensure &amp;&amp; exec /usr/local/bin/dbus-daemon --system --nofork --nopidfile</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/dbus-system.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/dbus-system.log</string>
+</dict>
+</plist>

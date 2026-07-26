@@ -1,0 +1,108 @@
+# Base system
+#x86_64 linux-image-amd64
+#aarch64 linux-image-arm64
+live-boot
+live-config
+live-config-sysvinit
+sysvinit-core
+
+# Boot
+grub2-common
+#x86_64 grub-pc-bin
+#x86_64 grub-efi-amd64-bin
+#aarch64 grub-efi-arm64-bin
+plymouth
+
+# Hardware
+brightnessctl
+
+# Firmware
+firmware-iwlwifi
+firmware-intel-graphics
+firmware-intel-misc
+firmware-amd-graphics
+firmware-linux-nonfree
+firmware-misc-nonfree
+firmware-realtek
+firmware-mediatek
+#aarch64 raspi-firmware
+
+# WLAN
+iw
+wireless-tools
+wpasupplicant
+
+# Sound
+firmware-sof-signed
+alsa-ucm-conf
+
+# Networking
+ifupdown
+iproute2
+iputils-ping
+dhcpcd
+
+# Core utilities
+sudo
+curl
+wget
+git
+make
+zsh
+nano
+file
+
+ca-certificates
+gnupg
+locales
+console-setup
+
+# Display server (Xorg)
+xorg
+
+# GPU / graphics drivers
+# xorg pulls the modesetting driver via xserver-xorg-core, but the full video
+# driver set is only a Recommends -- so install it explicitly since the build
+# uses --no-install-recommends. Needed for virtio-gpu under UTM/QEMU as well as
+# real hardware.
+xserver-xorg-video-all
+mesa-utils
+mesa-vulkan-drivers
+libva2
+#x86_64 xserver-xorg-video-intel
+#x86_64 xserver-xorg-video-amdgpu
+#x86_64 intel-media-va-driver-non-free
+
+# Installer
+parted
+e2fsprogs
+dosfstools
+
+# Boot splash
+# plymouth # FIXME: leads to crash when installed?
+# plymouth-themes
+
+# killall
+psmisc
+
+# xkill
+x11-utils
+
+# automounter; running 'devmon' will automount removable drives
+udevil
+sshfs
+
+# Needed for Network prefPane
+network-manager
+
+# Needed for Audio prefPane
+alsa-utils
+
+# Sharing
+avahi-daemon
+openssh-server
+
+# AppImages using an outdated runtime (e.g., Jitsi Meet desktop app)
+libfuse2t64
+
+qemu-guest-agent

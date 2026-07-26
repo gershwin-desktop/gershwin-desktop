@@ -1,0 +1,134 @@
+name: screenshot-gate
+description: >
+  Boot a flavor's ISO in QEMU+OVMF, log in as admin, and gate the publish on an
+  interactive desktop check — all driven from OUTSIDE the guest over the QEMU
+  monitor (screendump + sendkey; no mouse, nothing in-guest). Each step is a hard
+  gate: greeter appears -> desktop OCRs "System Disk" AND "Workspace" -> close
+  windows (Cmd+W) -> open About This Computer (Cmd+R, run "uitest aboutcomputer") -> OCR
+  "About This Computer". The ONLY published screenshot (named gershwin-on-<flavor>.png
+  from the caller's flavor) is the About-This-Computer frame. Init-agnostic on
+  purpose: it observes the shared
+  Gershwin greeter/desktop, so the same gate works for every flavor regardless of
+  whether launchd, systemd, rc.d or openrc started the session.
+
+inputs:
+  flavor:
+    description: >
+      Flavor being tested (e.g. nextbsd, devuan) — supplied by the caller
+      workflow. Used only to name the published screenshot gershwin-on-<flavor>.png.
+    required: true
+  iso-dir:
+    description: Directory containing the ISO to boot (first *.iso is used).
+    required: false
+    default: artifacts
+  arch:
+    description: CPU arch of the ISO (amd64 supported today; arm64 is a TODO).
+    required: false
+    default: amd64
+  soft-fail:
+    description: >
+      When 'true' (the dev channel) do NOT block on gate failures — publish the
+      ISO anyway and record the failed checks (screenshot/gate-failures.txt) so
+      the publish step lists them as red text under the screenshot in the release
+      body. Default 'false' (rc): the first failure fails the job and blocks the
+      release.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Install qemu + ovmf + tooling
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf socat imagemagick tesseract-ocr
+
+    - name: Launch VM (serial + VGA + monitor)
+      shell: bash
+      run: |
+        set -e
+        if [ "${{ inputs.arch }}" != "amd64" ]; then
+          echo "::error::screenshot-gate currently supports amd64 only (got '${{ inputs.arch }}')"
+          exit 1
+        fi
+        ISO=$(ls "${{ inputs.iso-dir }}"/*.iso 2>/dev/null | head -1)
+        [ -n "$ISO" ] || { echo "::error::no ISO in ${{ inputs.iso-dir }}"; ls -laR "${{ inputs.iso-dir }}"; exit 1; }
+        mkdir -p tests screenshot
+        OVMF=/usr/share/ovmf/OVMF.fd
+        [ -f "$OVMF" ] || OVMF=/usr/share/OVMF/OVMF_CODE.fd
+        ACCEL="-accel tcg -cpu qemu64"
+        if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
+        [ -r /dev/kvm ] && [ -w /dev/kvm ] && ACCEL="-accel kvm -cpu host"
+        echo "ISO=$ISO accel=$ACCEL ovmf=$OVMF"
+        nohup qemu-system-x86_64 \
+          -machine q35 -m 4G -smp 2 $ACCEL -bios "$OVMF" \
+          -cdrom "$ISO" -boot d \
+          -vga std \
+          -serial file:tests/serial.log \
+          -monitor unix:tests/mon.sock,server,nowait \
+          -nic user,model=e1000 \
+          -display none -no-reboot \
+          > tests/qemu.stdout 2>&1 &
+        echo $! > tests/qemu.pid
+        for i in $(seq 1 30); do [ -S tests/mon.sock ] && break; sleep 1; done
+        echo "qemu pid $(cat tests/qemu.pid); monitor: $(ls -l tests/mon.sock 2>/dev/null || echo MISSING)"
+
+    - name: boot-test (wait for greeter)
+      shell: bash
+      env:
+        GATE_SOFT: ${{ inputs.soft-fail }}
+      run: sh "${{ github.action_path }}/boot-test.sh"
+
+    # INPUT step: injects the admin login keystrokes into the greeter. It only
+    # *performs* the login (best-effort, always exits 0) — the judgement is
+    # desktop-test below, so this can never spuriously fail the gate.
+    - name: loginwindow-test (log in as admin)
+      shell: bash
+      run: sh "${{ github.action_path }}/loginwindow-test.sh"
+
+    # GATE: the interactive desktop sequence — desktop renders (System Disk +
+    # Workspace) → close windows → open About This Computer (Cmd+R, "uitest
+    # aboutcomputer") → verify About + menu still present, and capture that frame
+    # as the published screenshot. In hard mode (rc) any non-zero exit fails the
+    # action → the job → blocks publish; in soft mode (dev, soft-fail) failures
+    # are written to gate-failures.txt (listed red in the release body) and the
+    # job still succeeds so the dev ISO ships.
+    - name: desktop-test (System Disk + Workspace → About This Computer)
+      shell: bash
+      env:
+        GATE_FLAVOR: ${{ inputs.flavor }}
+        GATE_SOFT: ${{ inputs.soft-fail }}
+      run: sh "${{ github.action_path }}/desktop-test.sh"
+
+    - name: Upload desktop screenshot (+ gate failures for the release body)
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: desktop-screenshot
+        path: |
+          screenshot/gershwin-on-${{ inputs.flavor }}.png
+          screenshot/gate-failures.txt
+        if-no-files-found: ignore
+
+    - name: Shut down VM
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        printf 'quit\n' | socat -t2 - UNIX-CONNECT:tests/mon.sock >/dev/null 2>&1 || true
+        [ -f tests/qemu.pid ] && kill "$(cat tests/qemu.pid)" 2>/dev/null || true
+
+    - name: Upload boot artifacts
+      # Only on failure — these frames/serial logs are for debugging a broken
+      # gate; on success they're just wasted storage.
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: boot-artifacts
+        path: |
+          tests/serial.log
+          tests/frames/
+          tests/*.ppm
+          screenshot/*.png
+        retention-days: 7
+        if-no-files-found: ignore

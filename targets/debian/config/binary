@@ -1,0 +1,170 @@
+# config/binary - options for live-build(7), binary stage
+
+# $LB_BINARY_FILESYSTEM: set image filesystem
+# (Default: fat16)
+LB_BINARY_FILESYSTEM="fat16"
+
+# $LB_BINARY_IMAGES: set image type
+# (Default: iso-hybrid)
+LB_BINARY_IMAGES="iso-hybrid"
+
+# $LB_APT_INDICES: set apt/aptitude generic indices
+# (Default: true)
+LB_APT_INDICES="true"
+
+# $LB_BOOTAPPEND_LIVE: set boot parameters
+# (Default: empty)
+LB_BOOTAPPEND_LIVE="quiet splash live-config.noautologin live-config.noroot live-config.nocomponents=user-setup,xinit"
+
+# $LB_BOOTAPPEND_INSTALL: set boot parameters
+# (Default: empty)
+LB_BOOTAPPEND_INSTALL=""
+
+# $LB_BOOTAPPEND_FAILSAFE: set boot parameters
+# (Default: empty)
+LB_BOOTAPPEND_FAILSAFE="memtest noapic noapm nodma nomce nolapic nomodeset nosmp nosplash vga=normal"
+
+# $LB_BOOTLOADER: set bootloader
+# (Default: syslinux)
+LB_BOOTLOADER="syslinux"
+
+# $LB_CHECKSUMS: set checksums
+# (Default: sha256)
+LB_CHECKSUMS="sha256"
+
+# $LB_COMPRESSION: set compression
+# (Default: xz)
+LB_COMPRESSION="xz"
+
+# $LB_ZSYNC: set zsync
+# (Default: true)
+LB_ZSYNC="true"
+
+# ${LB_BUILD_WITH_CHROOT: control if we build binary images chrooted
+# (Default: true)
+# DO NEVER, *NEVER*, *N*E*V*E*R* SET THIS OPTION to false.
+LB_BUILD_WITH_CHROOT="true"
+
+# $LB_DEBIAN_INSTALLER: set debian-installer
+# (Default: live)
+LB_DEBIAN_INSTALLER="live"
+
+# $LB_DEBIAN_INSTALLER_DISTRIBUTION: set debian-installer suite
+# (Default: empty)
+LB_DEBIAN_INSTALLER_DISTRIBUTION="bookworm"
+
+# $LB_DEBIAN_INSTALLER_PRESEEDFILE: set debian-installer preseed filename/url
+# (Default: )
+LB_DEBIAN_INSTALLER_PRESEEDFILE=""
+
+# $LB_DEBIAN_INSTALLER_GUI: toggle use of GUI debian-installer
+# (Default: false)
+LB_DEBIAN_INSTALLER_GUI="false"
+
+# $LB_GRUB_SPLASH: set custom grub splash
+# (Default: empty)
+LB_GRUB_SPLASH=""
+
+# $LB_HDD_LABEL: set hdd label
+# (Default: UBUNTU)
+LB_HDD_LABEL="DEBIAN"
+
+# $LB_HDD_SIZE: set hdd filesystem size
+# (Default: 10000)
+LB_HDD_SIZE="10000"
+
+# $LB_ISO_APPLICATION: set iso author
+# (Default: Ubuntu Live)
+LB_ISO_APPLICATION="Debian Live"
+
+# $LB_ISO_PREPARER: set iso preparer
+# (Default: live-build $VERSION; http://packages.qa.debian.org/live-build)
+LB_ISO_PREPARER="live-build $VERSION; http://packages.qa.debian.org/live-build"
+
+# $LB_ISO_PUBLISHER: set iso publisher
+# (Default: Debian Live project; http://live.debian.net/; debian-live@lists.debian.org)
+LB_ISO_PUBLISHER="Debian Live project; http://live.debian.net/; debian-live@lists.debian.org"
+
+# $LB_ISO_VOLUME: set iso volume (max 32 chars)
+# (Default: Ubuntu bookworm $(date +%Y%m%d-%H:%M))
+LB_ISO_VOLUME="Debian $(date +%Y%m%d-%H:%M)"
+
+# $LB_EXT_BLOCKSIZE: set EXT block size
+# (Default: unset)
+LB_EXT_BLOCKSIZE=""
+
+# $LB_EXT_RESIZEBLOCKS: set EXT resize parameter
+# (Default: unset)
+LB_EXT_RESIZEBLOCKS=""
+
+# $LB_EXT_FUDGEFACTOR: set extra size of EXT images (in %)
+# (Default: unset)
+LB_EXT_FUDGEFACTOR=""
+
+# $LB_JFFS2_ERASEBLOCK: set jffs2 eraseblock size
+# (Default: unset)
+LB_JFFS2_ERASEBLOCK=""
+
+# $LB_MEMTEST: set memtest
+# (Default: memtest86+)
+LB_MEMTEST="memtest86+"
+
+# $LB_WIN32_LOADER: set win32-loader
+# (Default: )
+LB_WIN32_LOADER=""
+
+# $LB_NET_ROOT_FILESYSTEM: set netboot filesystem
+# (Default: nfs)
+LB_NET_ROOT_FILESYSTEM="nfs"
+
+# $LB_NET_ROOT_MOUNTOPTIONS: set nfsopts
+# (Default: empty)
+LB_NET_ROOT_MOUNTOPTIONS=""
+
+# $LB_NET_ROOT_PATH: set netboot server directory
+# (Default: /srv/ubuntu-live)
+LB_NET_ROOT_PATH="/srv/debian-live"
+
+# $LB_NET_ROOT_SERVER: set netboot server address
+# (Default: 192.168.1.1)
+LB_NET_ROOT_SERVER="192.168.1.1"
+
+# $LB_NET_COW_FILESYSTEM: set net client cow filesystem
+# (Default: nfs)
+LB_NET_COW_FILESYSTEM="nfs"
+
+# $LB_NET_COW_MOUNTOPTIONS: set cow mount options
+# (Default: empty)
+LB_NET_COW_MOUNTOPTIONS=""
+
+# $LB_NET_COW_PATH: set cow directory
+# (Default: )
+LB_NET_COW_PATH=""
+
+# $LB_NET_COW_SERVER: set cow server
+# (Default: )
+LB_NET_COW_SERVER=""
+
+# $LB_NET_TARBALL: set net tarball
+# (Default: true)
+LB_NET_TARBALL="true"
+
+# $LB_FIRMWARE_BINARY: include firmware packages in debian-installer
+# (Default: false)
+LB_FIRMWARE_BINARY="false"
+
+# $LB_FIRMWARE_CHROOT: include firmware packages in debian-installer
+# (Default: false)
+LB_FIRMWARE_CHROOT="false"
+
+# $LB_SWAP_FILE_PATH: set swap file path
+# (Default: )
+LB_SWAP_FILE_PATH=""
+
+# $LB_SWAP_FILE_SIZE: set swap file size
+# (Default: 512)
+LB_SWAP_FILE_SIZE="512"
+
+# $LB_SYSLINUX_THEME: set syslinux theme package
+# (Default: ubuntu-oneiric)
+LB_SYSLINUX_THEME=""
