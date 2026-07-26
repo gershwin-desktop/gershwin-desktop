@@ -117,6 +117,10 @@ the container choice barely affects build time.
    (transient distro-mirror errors; the gdomap menu race —
    `gershwin-desktop/gershwin-components#98`). Confirm the release has the
    channel-named `…-<channel>-<stamp>-<arch>.iso` + matching `.png`.
+   To rebuild every flavor at once, run the **`rc-all`** / **`dev-all`**
+   workflows (Actions → Run workflow). They discover the `rc-*` / `dev-*`
+   workflows from the Actions API and dispatch each one, so a new flavor joins
+   the fan-out as soon as its workflow lands — there is nothing to register.
 
 ## Worked example — Artix
 

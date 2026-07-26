@@ -46,6 +46,8 @@ source of truth. This skill is the operational checklist and the gotchas.
 ## Verify loop
 
 - Push to `main`; the flavor's build triggers (build → gate → publish → cleanup).
+  `rc-all` / `dev-all` fan out to every flavor on demand and discover them from
+  the Actions API — a new flavor is picked up automatically, nothing to register.
   Watch with `gh run list --workflow <wf>.yml` / `gh run view <id> --json conclusion,jobs`.
 - **Changes to shared `build.sh`/actions are no-ops for rc when the new env vars
   are unset** — a green rc proves the plumbing is safe.
