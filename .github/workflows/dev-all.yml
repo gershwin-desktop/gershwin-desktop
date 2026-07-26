@@ -61,9 +61,13 @@ jobs:
             echo "|---|---|"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # --repo is REQUIRED: this job has no actions/checkout, and gh
+          # resolves the repo from the local git remote unless told
+          # otherwise ("fatal: not a git repository"). gh api above is
+          # unaffected because its path is already fully qualified.
           rc=0
           for wf in $targets; do
-              if gh workflow run "$wf" --ref "$GITHUB_REF_NAME"; then
+              if gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"; then
                   echo "  ok      $wf"
                   echo "| \`$wf\` | ok |" >> "$GITHUB_STEP_SUMMARY"
               else
