@@ -46,5 +46,14 @@ mesa-dri
 # Command line tools useful in the installed system
 nano
 
-# Needed for whisper to enter text directly into windows
+# Needed for Whisper to enter text directly into windows
 xdotool
+
+# Needed for Energy prefPane
+xset
+
+# Needed for Keyboard prefPane
+setxkbmap
+
+# Needed for Mouse prefPane
+xinput
