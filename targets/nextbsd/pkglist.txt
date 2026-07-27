@@ -47,4 +47,4 @@ mesa-dri
 nano
 
 # Needed for whisper to enter text directly into windows
-xdo
+xdotool
