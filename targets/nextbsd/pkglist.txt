@@ -42,3 +42,9 @@ xlibre-xf86-video-vesa
 # this the X server logs "AIGLX error: dlopen of .../swrast_dri.so failed" and
 # "GLX: no usable GL providers", leaving the desktop with no working OpenGL.
 mesa-dri
+
+# Command line tools useful in the installed system
+nano
+
+# Needed for whisper to enter text directly into windows
+xdo
