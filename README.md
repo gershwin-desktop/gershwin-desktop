@@ -1,4 +1,4 @@
-# gershwin-desktop
+# Gershwin Desktop
 
 Gershwin is a desktop environment based on GNUstep welcoming to switchers.
 
