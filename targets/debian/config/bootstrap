@@ -22,15 +22,15 @@ LB_BOOTSTRAP_KEYRING=""
 
 # $LB_DISTRIBUTION: select distribution to use
 # (Default: bookworm)
-LB_DISTRIBUTION="bookworm"
+LB_DISTRIBUTION="trixie"
 
 # $LB_PARENT_DISTRIBUTION: select parent distribution to use
 # (Default: bookworm)
-LB_PARENT_DISTRIBUTION="bookworm"
+LB_PARENT_DISTRIBUTION="trixie"
 
 # $LB_PARENT_DEBIAN_INSTALLER_DISTRIBUTION: select parent distribution for debian-installer to use
 # (Default: bookworm)
-LB_PARENT_DEBIAN_INSTALLER_DISTRIBUTION="bookworm"
+LB_PARENT_DEBIAN_INSTALLER_DISTRIBUTION="trixie"
 
 # $LB_PARENT_MIRROR_BOOTSTRAP: set parent mirror to bootstrap from
 # (Default: http://archive.ubuntu.com/ubuntu/)
