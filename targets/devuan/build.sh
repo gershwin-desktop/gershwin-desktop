@@ -121,15 +121,23 @@ EOF
 # 25.0.7-2+deb13u1 is to be installed". This pin raises the mesa stack above
 # stable (500) so apt actually uses the backport.
 #
-# Pinned by explicit name, not a glob: this is exactly the set of src:mesa
-# binaries published in excalibur-backports, so the blast radius is auditable.
-# The mesa binaries that exist only in stable (libosmesa6, libxatracker2,
-# libd3dadapter9-mesa and their -dev packages) are not in this image, so there
-# is no split-version skew. Kept in the shipped ISO deliberately -- the
-# installed system must keep tracking backports mesa for XLibre's sake.
+# Pinned by explicit name, not a glob, and scoped to exactly the src:mesa
+# binaries this image actually installs -- all seven of which backports ships at
+# a consistent 26.1.2.
+#
+# Deliberately NOT pinned: mesa-va-drivers and mesa-vdpau-drivers. Backports is
+# internally inconsistent right now -- those two are still at 25.2.6 and carry a
+# strict "mesa-libgallium (= 25.2.6-1~bpo13+1)" dep that backports can no longer
+# satisfy, since mesa-libgallium has moved to 26.1.2. Neither is in this image,
+# so pinning them would be inert today but would strand the build the moment
+# anything pulled in hardware video acceleration. Same reasoning excludes
+# mesa-opencl-icd and mesa-drm-shim.
+#
+# Kept in the shipped ISO on purpose: the installed system must keep tracking
+# backports mesa for XLibre's sake instead of drifting back to stable.
 mkdir -p "${WORK}/rootfs/etc/apt/preferences.d"
 cat > "${WORK}/rootfs/etc/apt/preferences.d/xlibre-mesa-backports.pref" << EOF
-Package: libegl-mesa0 libegl1-mesa-dev libgbm-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri libgles2-mesa-dev libglx-mesa0 mesa-common-dev mesa-drm-shim mesa-libgallium mesa-opencl-icd mesa-va-drivers mesa-vdpau-drivers mesa-vulkan-drivers
+Package: libegl-mesa0 libgbm1 libgl1-mesa-dri libglx-mesa0 mesa-common-dev mesa-libgallium mesa-vulkan-drivers
 Pin: release n=${DIST}-backports
 Pin-Priority: 600
 EOF
