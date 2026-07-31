@@ -4,6 +4,10 @@ set -e
 # === Configuration ===
 DIST="excalibur"
 MIRROR="http://deb.devuan.org/merged"
+# XLibre repo coordinates. The component tracks DIST: Devuan stable (excalibur)
+# -> "stable", Devuan testing (freia) -> "testing". Keep in sync when DIST moves.
+XLIBRE_URI="https://xlibre-debian.github.io/devuan/"
+XLIBRE_COMPONENT="stable"
 HOST_ARCH=$(uname -m)
 case "$HOST_ARCH" in
     x86_64|i?86) ARCH="amd64" ;;
@@ -38,6 +42,38 @@ deb ${MIRROR} ${DIST} main contrib non-free non-free-firmware
 deb ${MIRROR} ${DIST}-security main contrib non-free non-free-firmware
 deb ${MIRROR} ${DIST}-updates main contrib non-free non-free-firmware
 deb ${MIRROR} ${DIST}-backports main contrib non-free non-free-firmware
+EOF
+
+# === Step 2a: Configure the XLibre apt repo inside rootfs ===
+# Gershwin ships XLibre instead of Xorg. XLibre lives in a third-party repo, so
+# its signing key must be trusted before the Step 3 apt-get run.
+#
+# The key is committed at keys/xlibre.asc rather than fetched at build time, so
+# builds are reproducible and keep working when the upstream key host is
+# unreachable. apt reads an ASCII-armored key directly from Signed-By, so no
+# gpg --dearmor step is needed.
+#
+# Provenance -- re-verify with these before ever replacing keys/xlibre.asc:
+#   source      https://mrchicken.nexussfan.cz/publickey.asc
+#   uid         NexusSfan <nexussfan@duck.com>  (rsa4096)
+#   fingerprint 2207 5A91 9DAE B177 E874  C5D1 D79C D6F1 B523 94FA
+#   confirmed   good signature on dists/main/InRelease of both
+#               xlibre-debian.github.io/devuan and .../debian
+#
+# It is installed as xlibre.asc, NOT as NexusSfan.pgp: that path is owned by
+# nexussfan-archive-keyring (pulled in by xlibre-archive-keyring in
+# packages.list) and a hand-placed file there would make dpkg file-conflict.
+echo "==> Configuring XLibre repository..."
+install -D -m 0644 keys/xlibre.asc "${WORK}/rootfs/usr/share/keyrings/xlibre.asc"
+
+mkdir -p "${WORK}/rootfs/etc/apt/sources.list.d"
+cat > "${WORK}/rootfs/etc/apt/sources.list.d/xlibre.sources" << EOF
+Types: deb
+URIs: ${XLIBRE_URI}
+Suites: main
+Components: ${XLIBRE_COMPONENT}
+Architectures: ${ARCH}
+Signed-By: /usr/share/keyrings/xlibre.asc
 EOF
 
 # === Step 2b: Prepare chroot ===
@@ -117,6 +153,9 @@ echo "blacklist pcspkr" | tee "${WORK}/rootfs"/etc/modprobe.d/blacklist-pcspkr.c
 # so nothing is ever flushed to the scanout -> black screen once X starts.
 # Force the software-present path. Scoped via MatchDriver so it ONLY touches
 # virtio_gpu -- real Intel/AMD/NVIDIA GPUs keep hardware acceleration.
+# Still correct under XLibre: xserver-xlibre-core Provides and Replaces
+# xserver-xorg-video-modesetting, and xserver-xlibre-common still owns
+# /etc/X11/xorg.conf.d, so both the driver name and this path are unchanged.
 mkdir -p "${WORK}/rootfs"/etc/X11/xorg.conf.d
 cat > "${WORK}/rootfs"/etc/X11/xorg.conf.d/20-virtio-gpu.conf <<\EOF
 Section "OutputClass"

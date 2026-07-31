@@ -57,20 +57,30 @@ gnupg
 locales
 console-setup
 
-# Display server (Xorg)
-xorg
+# Display server (XLibre)
+# Comes from the third-party XLibre repo configured in build.sh, not Devuan.
+# 'xlibre' Conflicts with and Provides 'xorg', so this is a straight swap --
+# nothing else in this list needs to know which X server it got.
+xlibre
+# Ships the repo's signing key as a dpkg-managed file, so the ISO keeps
+# verifying XLibre updates after the key baked into the image is superseded.
+xlibre-archive-keyring
 
 # GPU / graphics drivers
-# xorg pulls the modesetting driver via xserver-xorg-core, but the full video
-# driver set is only a Recommends -- so install it explicitly since the build
-# uses --no-install-recommends. Needed for virtio-gpu under UTM/QEMU as well as
-# real hardware.
-xserver-xorg-video-all
+# xlibre pulls the modesetting driver via xserver-xlibre-core, but the full
+# video driver set is only a Recommends -- so install it explicitly since the
+# build uses --no-install-recommends. Needed for virtio-gpu under UTM/QEMU as
+# well as real hardware.
+# Heads-up: this pulls xserver-xlibre-video-amdgpu, which depends on mesa
+# >= 25.2.6 while excalibur ships 25.0.7. apt satisfies that from
+# excalibur-backports (enabled in build.sh, priority 100), which upgrades mesa
+# image-wide to the 26.x backport rather than leaving it at stable.
+xserver-xlibre-video-all
 mesa-utils
 mesa-vulkan-drivers
 libva2
-#x86_64 xserver-xorg-video-intel
-#x86_64 xserver-xorg-video-amdgpu
+#x86_64 xserver-xlibre-video-intel
+#x86_64 xserver-xlibre-video-amdgpu
 #x86_64 intel-media-va-driver-non-free
 
 # Installer
