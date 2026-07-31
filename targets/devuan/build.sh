@@ -44,9 +44,45 @@ deb ${MIRROR} ${DIST}-updates main contrib non-free non-free-firmware
 deb ${MIRROR} ${DIST}-backports main contrib non-free non-free-firmware
 EOF
 
-# === Step 2a: Configure the XLibre apt repo inside rootfs ===
-# Gershwin ships XLibre instead of Xorg. XLibre lives in a third-party repo, so
-# its signing key must be trusted before the Step 3 apt-get run.
+# === Step 2b: Prepare chroot ===
+echo "==> Preparing chroot..."
+mount --bind /dev "${WORK}/rootfs/dev"
+mount --bind /dev/pts "${WORK}/rootfs/dev/pts"
+mount -t proc proc "${WORK}/rootfs/proc"
+mount -t sysfs sysfs "${WORK}/rootfs/sys"
+
+# Prevent services from starting during install
+cat > "${WORK}/rootfs/usr/sbin/policy-rc.d" << 'EOF'
+#!/bin/sh
+exit 101
+EOF
+chmod +x "${WORK}/rootfs/usr/sbin/policy-rc.d"
+
+# === Step 3: Install packages ===
+echo "==> Installing packages..."
+
+# Uncomment arch-specific lines, then strip remaining comments
+cp packages.list packages.list.tmp
+sed -i "s/^#${HOST_ARCH} //g" packages.list.tmp
+PACKAGES=$(grep -v '^#' packages.list.tmp | grep -v '^$' | tr '\n' ' ')
+rm -f packages.list.tmp
+
+# Seed the trust store first. The XLibre repo is HTTPS-only, but a minbase
+# debootstrap has no CA bundle, so apt cannot verify github.io and drops the
+# repo. It does that as a *warning*, not an error -- the build then runs on with
+# every xlibre package "Unable to locate". Devuan's own mirror is plain http, so
+# ca-certificates installs fine before the XLibre repo is ever added.
+# -e so a failure here stops the build instead of surfacing much later.
+chroot "${WORK}/rootfs" /bin/sh -ec "
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends ca-certificates
+"
+
+# === Step 3a: Configure the XLibre apt repo inside rootfs ===
+# Gershwin ships XLibre instead of Xorg, which lives in a third-party repo, so
+# its signing key must be trusted before the package install below. This has to
+# come after ca-certificates above -- see the note there.
 #
 # The key is committed at keys/xlibre.asc rather than fetched at build time, so
 # builds are reproducible and keep working when the upstream key host is
@@ -76,30 +112,10 @@ Architectures: ${ARCH}
 Signed-By: /usr/share/keyrings/xlibre.asc
 EOF
 
-# === Step 2b: Prepare chroot ===
-echo "==> Preparing chroot..."
-mount --bind /dev "${WORK}/rootfs/dev"
-mount --bind /dev/pts "${WORK}/rootfs/dev/pts"
-mount -t proc proc "${WORK}/rootfs/proc"
-mount -t sysfs sysfs "${WORK}/rootfs/sys"
-
-# Prevent services from starting during install
-cat > "${WORK}/rootfs/usr/sbin/policy-rc.d" << 'EOF'
-#!/bin/sh
-exit 101
-EOF
-chmod +x "${WORK}/rootfs/usr/sbin/policy-rc.d"
-
-# === Step 3: Install packages ===
-echo "==> Installing packages..."
-
-# Uncomment arch-specific lines, then strip remaining comments
-cp packages.list packages.list.tmp
-sed -i "s/^#${HOST_ARCH} //g" packages.list.tmp
-PACKAGES=$(grep -v '^#' packages.list.tmp | grep -v '^$' | tr '\n' ' ')
-rm -f packages.list.tmp
-
-chroot "${WORK}/rootfs" /bin/sh -c "
+# -e so an unresolvable package list fails the build here. Without it a failed
+# apt-get install is swallowed by the inner shell and only shows up much later
+# as a confusing error from the Gershwin step.
+chroot "${WORK}/rootfs" /bin/sh -ec "
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y --no-install-recommends ${PACKAGES}
