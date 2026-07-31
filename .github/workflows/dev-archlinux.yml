@@ -27,8 +27,12 @@ jobs:
       options: --privileged
     timeout-minutes: 120
     steps:
+      # grub is a host tool here, not a shipped package: the 'uefi.grub' bootmode
+      # runs grub-mkstandalone and reads /usr/share/grub/sbat.csv from the
+      # container. mkarchiso hard-fails validation without it.
       - name: Install archiso
-        run: pacman -Syu --noconfirm archiso git
+        run: pacman -Syu --noconfirm archiso git grub
+
 
       - uses: actions/checkout@v4
 
@@ -50,6 +54,41 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/dist-iso"
           cp "$iso_file" "$GITHUB_WORKSPACE/dist-iso/$out_name"
           ls -lh "$GITHUB_WORKSPACE/dist-iso/"
+
+      # GitHub rejects release assets >= 2 GiB ("size must be less than
+      # 2147483648"), and until now that only surfaced in the publish job, ~20
+      # minutes and a full boot gate after the build that caused it. Report the
+      # breakdown and fail here instead. Mirrors the ISO SIZE REPORT in
+      # targets/freebsd/build.sh.
+      - name: ISO size report + 2 GiB release-asset gate
+        run: |
+          set -eu
+          limit=2147483648
+          iso=$(find "$GITHUB_WORKSPACE/dist-iso" -name '*.iso' | head -n 1)
+          size=$(stat -c%s "$iso")
+          echo "=================== ISO SIZE REPORT (archlinux) ==================="
+          echo "--- biggest files in the ISO 9660 tree (MiB) ---"
+          find work/iso -type f -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -12 \
+            | awk -F'\t' '{printf "  %9.1f  %s\n", $1/1048576, $2}' || true
+          echo "--- efiboot.img (UEFI ESP) ---"
+          # With uefi.grub this holds GRUB + the UEFI shell only. If it is ever
+          # ~250 MiB again, something reintroduced systemd-boot and with it a
+          # second copy of the kernel + initramfs + microcode.
+          if [ -f work/efiboot.img ]; then
+            awk -v s="$(stat -c%s work/efiboot.img)" 'BEGIN{printf "  %9.1f  work/efiboot.img\n", s/1048576}'
+          else
+            echo "  (none)"
+          fi
+          echo "--- total ---"
+          awk -v s="$size" -v l="$limit" 'BEGIN{
+            printf "  ISO       %9.1f MiB (%d bytes)\n", s/1048576, s
+            printf "  limit     %9.1f MiB (%d bytes)\n", l/1048576, l
+            printf "  headroom  %9.1f MiB\n", (l-s)/1048576 }'
+          echo "==================================================================="
+          if [ "$size" -ge "$limit" ]; then
+            echo "::error::ISO is $size bytes, at or over GitHub's $limit release-asset limit, so it cannot be published. See the report above and the notes in targets/archlinux/profiledef.sh."
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
