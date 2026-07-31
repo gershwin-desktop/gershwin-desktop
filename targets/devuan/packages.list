@@ -71,10 +71,11 @@ xlibre-archive-keyring
 # video driver set is only a Recommends -- so install it explicitly since the
 # build uses --no-install-recommends. Needed for virtio-gpu under UTM/QEMU as
 # well as real hardware.
-# Heads-up: this pulls xserver-xlibre-video-amdgpu, which depends on mesa
-# >= 25.2.6 while excalibur ships 25.0.7. apt satisfies that from
-# excalibur-backports (enabled in build.sh, priority 100), which upgrades mesa
-# image-wide to the 26.x backport rather than leaving it at stable.
+# Heads-up: this pulls xserver-xlibre-video-amdgpu, which needs mesa >= 25.2.6
+# while excalibur ships 25.0.7. That is why XLibre upstream tells Excalibur
+# users they HAVE to enable backports. Note that merely having backports in
+# sources.list is not enough -- it is NotAutomatic, so build.sh also pins the
+# mesa stack to it. Net effect: mesa is the 26.x backport image-wide, not stable.
 xserver-xlibre-video-all
 mesa-utils
 mesa-vulkan-drivers

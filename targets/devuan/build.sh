@@ -112,6 +112,28 @@ Architectures: ${ARCH}
 Signed-By: /usr/share/keyrings/xlibre.asc
 EOF
 
+# XLibre's upstream instructions say Excalibur users "HAVE to enable backports",
+# because xserver-xlibre-video-amdgpu needs mesa >= 25.2.6 and excalibur ships
+# 25.0.7. Enabling backports is necessary but NOT sufficient: it is NotAutomatic
+# (priority 100), so apt refuses to take mesa from it to satisfy a dependency
+# once a stable mesa is already selected, and the build dies with
+# "xserver-xlibre-video-amdgpu : Depends: mesa-common-dev (>= 25.2.6) but
+# 25.0.7-2+deb13u1 is to be installed". This pin raises the mesa stack above
+# stable (500) so apt actually uses the backport.
+#
+# Pinned by explicit name, not a glob: this is exactly the set of src:mesa
+# binaries published in excalibur-backports, so the blast radius is auditable.
+# The mesa binaries that exist only in stable (libosmesa6, libxatracker2,
+# libd3dadapter9-mesa and their -dev packages) are not in this image, so there
+# is no split-version skew. Kept in the shipped ISO deliberately -- the
+# installed system must keep tracking backports mesa for XLibre's sake.
+mkdir -p "${WORK}/rootfs/etc/apt/preferences.d"
+cat > "${WORK}/rootfs/etc/apt/preferences.d/xlibre-mesa-backports.pref" << EOF
+Package: libegl-mesa0 libegl1-mesa-dev libgbm-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri libgles2-mesa-dev libglx-mesa0 mesa-common-dev mesa-drm-shim mesa-libgallium mesa-opencl-icd mesa-va-drivers mesa-vdpau-drivers mesa-vulkan-drivers
+Pin: release n=${DIST}-backports
+Pin-Priority: 600
+EOF
+
 # -e so an unresolvable package list fails the build here. Without it a failed
 # apt-get install is swallowed by the inner shell and only shows up much later
 # as a confusing error from the Gershwin step.
