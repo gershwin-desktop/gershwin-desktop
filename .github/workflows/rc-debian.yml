@@ -23,7 +23,7 @@ jobs:
     name: build (debian amd64)
     runs-on: ubuntu-latest
     container:
-      image: debian:latest
+      image: debian:trixie
       options: --privileged
       volumes:
         - /proc:/proc
@@ -45,7 +45,7 @@ jobs:
           arch=$(uname -m)
           sed -i "s/^#${arch} //g" config/package-lists/hardware.list.chroot || true
           lb config --debian-installer live \
-                    --distribution bookworm \
+                    --distribution trixie \
                     --archive-areas "main contrib non-free non-free-firmware" \
                     --initramfs live-boot \
                     --zsync false \

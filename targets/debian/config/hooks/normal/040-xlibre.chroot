@@ -1,29 +1,102 @@
 #!/bin/bash
 set -ex
 
-# FIXME: For now, don't replace Xorg with XLibre as it segfaults when booted in VirtualBox
-exit 0
+# Install XLibre in place of Xorg.
+#
+# Why a hook and not config/archives: the XLibre repo is HTTPS-only, and a fresh
+# live-build chroot has no CA bundle. live-build applies config/archives during
+# chroot_prep -- before any package is installed -- so apt would fail to verify
+# the certificate there. Worse, apt reports an unreachable source as a *warning*,
+# so the build would carry on with every xlibre package "Unable to locate" and
+# fail later with something unrelated. Hooks run after package installation
+# (chroot_hooks), by which point ca-certificates is present -- the same reason
+# 010-gnustep.chroot can already git clone over HTTPS.
+#
+# Debian's own Xorg server is kept out of the image by
+# config/archives/no-xorg.pref.chroot, so there is nothing to tear out here.
 
-##########################################################################################
+arch="$(dpkg --print-architecture)"
 
-# This installs XLibre (replaces Xorg if already installed)
-
-# For Debian 12 (bookworm) we might need to install libdrm* packages from Debian bookworm-backports repository
-
-cat <<EOF | sudo tee /etc/apt/sources.list.d/debian-backports.sources
-Types: deb deb-src
+# mesa >= 25.2.6 is needed by xserver-xlibre-video-amdgpu; trixie ships 25.0.7.
+# Same situation Devuan is in, and XLibre upstream's answer is to enable
+# backports.
+#
+# 030-virtualbox-guest-utils.chroot already enables backports and runs first, so
+# only add it when it is missing -- otherwise apt warns about the suite being
+# configured twice. Still done here so this hook stands on its own if that one is
+# ever disabled, the way 060-nvidia.chroot currently is.
+if ! grep -rqs "trixie-backports" /etc/apt/sources.list /etc/apt/sources.list.d/; then
+    cat > /etc/apt/sources.list.d/backports.sources <<EOF
+Types: deb
 URIs: http://deb.debian.org/debian
-Suites: bookworm-backports
+Suites: trixie-backports
 Components: main
-Enabled: yes
+Architectures: ${arch}
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+fi
 
-sudo apt-get update
-sudo apt-get install -y -t bookworm-backports 'libdrm*'
+# The signing key ships at config/includes.chroot/usr/share/keyrings/xlibre.asc
+# rather than being fetched here, so the build is reproducible and does not
+# depend on the upstream key host being reachable. live-build copies includes in
+# chroot_includes_after_packages, which runs immediately before hooks, so the key
+# is already in place. apt reads an ASCII-armored key directly from Signed-By.
+#
+# Provenance -- re-verify with these before ever replacing that key:
+#   source      https://mrchicken.nexussfan.cz/publickey.asc
+#   uid         NexusSfan <nexussfan@duck.com>  (rsa4096)
+#   fingerprint 2207 5A91 9DAE B177 E874  C5D1 D79C D6F1 B523 94FA
+#   confirmed   good signature on dists/main/InRelease of both
+#               xlibre-debian.github.io/debian and .../devuan
+#
+# Signed-By scopes the key to this one repo. That is deliberately not
+# config/archives/*.key.chroot, which live-build drops into trusted.gpg.d where
+# it would be trusted for every repo including deb.debian.org.
+cat > /etc/apt/sources.list.d/xlibre.sources <<EOF
+Types: deb
+URIs: https://xlibre-debian.github.io/debian/
+Suites: main
+Components: stable
+Architectures: ${arch}
+Signed-By: /usr/share/keyrings/xlibre.asc
+EOF
 
-# Install xlibre
-sudo apt-get install -y extrepo
-sudo extrepo enable xlibre
-sudo apt-get update
-sudo apt-get install -y xlibre
+# Backports is NotAutomatic (priority 100), so merely enabling it is not enough:
+# apt will not take mesa from it to satisfy a dependency once a trixie mesa has
+# been selected, and the install dies with "xserver-xlibre-video-amdgpu :
+# Depends: mesa-common-dev (>= 25.2.6) but 25.0.7-2+deb13u1 is to be installed".
+# Pinning above trixie's 500 is what actually makes apt use the backport.
+#
+# Scoped to exactly the src:mesa binaries this image installs, all of which
+# trixie-backports ships at a consistent 26.1.2. mesa-va-drivers and
+# mesa-vdpau-drivers are deliberately excluded: backports is inconsistent with
+# itself and strands those two at 25.2.6 with an unsatisfiable
+# "mesa-libgallium (= 25.2.6-1~bpo13+1)" dependency.
+cat > /etc/apt/preferences.d/xlibre-mesa-backports.pref <<EOF
+Package: libegl-mesa0 libgbm1 libgl1-mesa-dri libglx-mesa0 mesa-common-dev mesa-libgallium mesa-vulkan-drivers
+Pin: release n=trixie-backports
+Pin-Priority: 600
+EOF
+
+apt-get update
+
+# xlibre Conflicts with and Provides xorg; xserver-xlibre-core does the same for
+# xserver-xorg-core, so this covers the whole X server role. qxl is listed
+# explicitly (it is not part of -video-all) for the QEMU/spice guest case.
+packages=(
+    xlibre
+    xlibre-archive-keyring
+    xserver-xlibre-video-all
+    xserver-xlibre-video-qxl
+)
+
+# Intel's DDX is x86-only, matching the #x86_64 convention in the package lists.
+if [ "$arch" = "amd64" ] || [ "$arch" = "i386" ]; then
+    packages+=(xserver-xlibre-video-intel)
+fi
+
+apt-get install -y "${packages[@]}"
+
+# Fail loudly if the X server somehow did not land, rather than shipping an ISO
+# that cannot start a desktop.
+dpkg-query -W xserver-xlibre-core

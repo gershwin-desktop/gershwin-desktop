@@ -1,0 +1,17 @@
+# Keep Debian's Xorg server out of the image entirely.
+#
+# This has to be an archives/*.pref.chroot rather than something 040-xlibre.chroot
+# sets up, because live-build applies config/archives during chroot_prep -- before
+# package lists install -- whereas hooks run afterwards. Without it, xinit
+# (desktop.list.chroot) Recommends xserver-xorg, live-build installs Recommends,
+# and the Xorg server lands during package installation only to be torn back out
+# when the hook installs XLibre, which Conflicts with it. Blocking it up front
+# skips the install-then-remove churn and makes the result deterministic.
+#
+# Nothing is lost: xserver-xlibre-core Provides xserver-xorg-core, so anything
+# depending on the Xorg server is satisfied by XLibre instead. The negative pin
+# applies to these package names only and does not affect the XLibre packages
+# that provide them.
+Package: xserver-xorg xserver-xorg-core
+Pin: release *
+Pin-Priority: -1
