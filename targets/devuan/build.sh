@@ -4,6 +4,10 @@ set -e
 # === Configuration ===
 DIST="excalibur"
 MIRROR="http://deb.devuan.org/merged"
+# XLibre repo coordinates. The component tracks DIST: Devuan stable (excalibur)
+# -> "stable", Devuan testing (freia) -> "testing". Keep in sync when DIST moves.
+XLIBRE_URI="https://xlibre-debian.github.io/devuan/"
+XLIBRE_COMPONENT="stable"
 HOST_ARCH=$(uname -m)
 case "$HOST_ARCH" in
     x86_64|i?86) ARCH="amd64" ;;
@@ -63,7 +67,85 @@ sed -i "s/^#${HOST_ARCH} //g" packages.list.tmp
 PACKAGES=$(grep -v '^#' packages.list.tmp | grep -v '^$' | tr '\n' ' ')
 rm -f packages.list.tmp
 
-chroot "${WORK}/rootfs" /bin/sh -c "
+# Seed the trust store first. The XLibre repo is HTTPS-only, but a minbase
+# debootstrap has no CA bundle, so apt cannot verify github.io and drops the
+# repo. It does that as a *warning*, not an error -- the build then runs on with
+# every xlibre package "Unable to locate". Devuan's own mirror is plain http, so
+# ca-certificates installs fine before the XLibre repo is ever added.
+# -e so a failure here stops the build instead of surfacing much later.
+chroot "${WORK}/rootfs" /bin/sh -ec "
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends ca-certificates
+"
+
+# === Step 3a: Configure the XLibre apt repo inside rootfs ===
+# Gershwin ships XLibre instead of Xorg, which lives in a third-party repo, so
+# its signing key must be trusted before the package install below. This has to
+# come after ca-certificates above -- see the note there.
+#
+# The key is committed at keys/xlibre.asc rather than fetched at build time, so
+# builds are reproducible and keep working when the upstream key host is
+# unreachable. apt reads an ASCII-armored key directly from Signed-By, so no
+# gpg --dearmor step is needed.
+#
+# Provenance -- re-verify with these before ever replacing keys/xlibre.asc:
+#   source      https://mrchicken.nexussfan.cz/publickey.asc
+#   uid         NexusSfan <nexussfan@duck.com>  (rsa4096)
+#   fingerprint 2207 5A91 9DAE B177 E874  C5D1 D79C D6F1 B523 94FA
+#   confirmed   good signature on dists/main/InRelease of both
+#               xlibre-debian.github.io/devuan and .../debian
+#
+# It is installed as xlibre.asc, NOT as NexusSfan.pgp: that path is owned by
+# nexussfan-archive-keyring (pulled in by xlibre-archive-keyring in
+# packages.list) and a hand-placed file there would make dpkg file-conflict.
+echo "==> Configuring XLibre repository..."
+install -D -m 0644 keys/xlibre.asc "${WORK}/rootfs/usr/share/keyrings/xlibre.asc"
+
+mkdir -p "${WORK}/rootfs/etc/apt/sources.list.d"
+cat > "${WORK}/rootfs/etc/apt/sources.list.d/xlibre.sources" << EOF
+Types: deb
+URIs: ${XLIBRE_URI}
+Suites: main
+Components: ${XLIBRE_COMPONENT}
+Architectures: ${ARCH}
+Signed-By: /usr/share/keyrings/xlibre.asc
+EOF
+
+# XLibre's upstream instructions say Excalibur users "HAVE to enable backports",
+# because xserver-xlibre-video-amdgpu needs mesa >= 25.2.6 and excalibur ships
+# 25.0.7. Enabling backports is necessary but NOT sufficient: it is NotAutomatic
+# (priority 100), so apt refuses to take mesa from it to satisfy a dependency
+# once a stable mesa is already selected, and the build dies with
+# "xserver-xlibre-video-amdgpu : Depends: mesa-common-dev (>= 25.2.6) but
+# 25.0.7-2+deb13u1 is to be installed". This pin raises the mesa stack above
+# stable (500) so apt actually uses the backport.
+#
+# Pinned by explicit name, not a glob, and scoped to exactly the src:mesa
+# binaries this image actually installs -- all seven of which backports ships at
+# a consistent 26.1.2.
+#
+# Deliberately NOT pinned: mesa-va-drivers and mesa-vdpau-drivers. Backports is
+# internally inconsistent right now -- those two are still at 25.2.6 and carry a
+# strict "mesa-libgallium (= 25.2.6-1~bpo13+1)" dep that backports can no longer
+# satisfy, since mesa-libgallium has moved to 26.1.2. Neither is in this image,
+# so pinning them would be inert today but would strand the build the moment
+# anything pulled in hardware video acceleration. Same reasoning excludes
+# mesa-opencl-icd and mesa-drm-shim.
+#
+# Kept in the shipped ISO on purpose: the installed system must keep tracking
+# backports mesa for XLibre's sake instead of drifting back to stable.
+mkdir -p "${WORK}/rootfs/etc/apt/preferences.d"
+cat > "${WORK}/rootfs/etc/apt/preferences.d/xlibre-mesa-backports.pref" << EOF
+Package: libegl-mesa0 libgbm1 libgl1-mesa-dri libglx-mesa0 mesa-common-dev mesa-libgallium mesa-vulkan-drivers
+Pin: release n=${DIST}-backports
+Pin-Priority: 600
+EOF
+
+# -e so an unresolvable package list fails the build here. Without it a failed
+# apt-get install is swallowed by the inner shell and only shows up much later
+# as a confusing error from the Gershwin step.
+chroot "${WORK}/rootfs" /bin/sh -ec "
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y --no-install-recommends ${PACKAGES}
@@ -117,6 +199,9 @@ echo "blacklist pcspkr" | tee "${WORK}/rootfs"/etc/modprobe.d/blacklist-pcspkr.c
 # so nothing is ever flushed to the scanout -> black screen once X starts.
 # Force the software-present path. Scoped via MatchDriver so it ONLY touches
 # virtio_gpu -- real Intel/AMD/NVIDIA GPUs keep hardware acceleration.
+# Still correct under XLibre: xserver-xlibre-core Provides and Replaces
+# xserver-xorg-video-modesetting, and xserver-xlibre-common still owns
+# /etc/X11/xorg.conf.d, so both the driver name and this path are unchanged.
 mkdir -p "${WORK}/rootfs"/etc/X11/xorg.conf.d
 cat > "${WORK}/rootfs"/etc/X11/xorg.conf.d/20-virtio-gpu.conf <<\EOF
 Section "OutputClass"
