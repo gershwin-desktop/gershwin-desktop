@@ -9,6 +9,18 @@ pacman -Scc --noconfirm
 pacman-key --init
 pacman-key --populate archlinux
 
+# Trust the XLibre signing key in the ISO's own keyring as well, so the running
+# system can install and update XLibre packages -- the [xlibre] repo is in the
+# shipped pacman.conf. Same full-fingerprint pin as the build-time import in the
+# workflow: a swapped key fails here rather than being trusted.
+xlibre_fpr=0C92313001CFCA27627B9098B97F7C613F359424
+curl -fsSL -o /tmp/xlibre.asc https://xlibre-arch.github.io/xlibre-archlinux.asc
+gpg --show-keys --with-colons /tmp/xlibre.asc \
+  | awk -F: '/^fpr:/{print $10}' | grep -qx "$xlibre_fpr"
+pacman-key --add /tmp/xlibre.asc
+pacman-key --lsign-key "$xlibre_fpr"
+rm -f /tmp/xlibre.asc
+
 # Some GNUstep build scripts need /proc
 mount -t proc proc /proc
 

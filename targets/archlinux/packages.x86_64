@@ -126,8 +126,14 @@ zsh
 #networkmanager
 #dolphin
 #firefox
-xorg-server
-xorg-drivers
+# XLibre replaces Xorg. From the [xlibre] repo (see pacman.conf), not Arch.
+# xlibre-xserver Provides and Conflicts xorg-server, and xlibre-drivers is the
+# repo's own group -- the direct counterpart of Arch's xorg-drivers group, with
+# 18 members (7 input + 11 video) against xorg-drivers' 14.
+# xorg-xinit stays: it is an X client, depends only on libx11/xauth/xrdb/xmodmap,
+# and pulls no X server of its own.
+xlibre-xserver
+xlibre-drivers
 xorg-xinit
 
 # Recovery tools
