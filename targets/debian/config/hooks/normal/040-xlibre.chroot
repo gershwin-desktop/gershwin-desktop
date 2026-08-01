@@ -20,7 +20,13 @@ arch="$(dpkg --print-architecture)"
 # mesa >= 25.2.6 is needed by xserver-xlibre-video-amdgpu; trixie ships 25.0.7.
 # Same situation Devuan is in, and XLibre upstream's answer is to enable
 # backports.
-cat > /etc/apt/sources.list.d/backports.sources <<EOF
+#
+# 030-virtualbox-guest-utils.chroot already enables backports and runs first, so
+# only add it when it is missing -- otherwise apt warns about the suite being
+# configured twice. Still done here so this hook stands on its own if that one is
+# ever disabled, the way 060-nvidia.chroot currently is.
+if ! grep -rqs "trixie-backports" /etc/apt/sources.list /etc/apt/sources.list.d/; then
+    cat > /etc/apt/sources.list.d/backports.sources <<EOF
 Types: deb
 URIs: http://deb.debian.org/debian
 Suites: trixie-backports
@@ -28,6 +34,7 @@ Components: main
 Architectures: ${arch}
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+fi
 
 # The signing key ships at config/includes.chroot/usr/share/keyrings/xlibre.asc
 # rather than being fetched here, so the build is reproducible and does not
