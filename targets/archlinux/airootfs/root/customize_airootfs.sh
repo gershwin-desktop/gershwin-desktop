@@ -15,8 +15,13 @@ pacman-key --populate archlinux
 # workflow: a swapped key fails here rather than being trusted.
 xlibre_fpr=0C92313001CFCA27627B9098B97F7C613F359424
 curl -fsSL -o /tmp/xlibre.asc https://xlibre-arch.github.io/xlibre-archlinux.asc
-gpg --show-keys --with-colons /tmp/xlibre.asc \
+# Own GNUPGHOME for the fingerprint check: this runs in the airootfs chroot with
+# HOME inherited from the build environment (/github/home on CI), which does not
+# exist in here, and gpg fatals trying to create its homedir under it.
+xlibre_gnupg="$(mktemp -d)"
+GNUPGHOME="$xlibre_gnupg" gpg --show-keys --with-colons /tmp/xlibre.asc \
   | awk -F: '/^fpr:/{print $10}' | grep -qx "$xlibre_fpr"
+rm -rf "$xlibre_gnupg"
 pacman-key --add /tmp/xlibre.asc
 pacman-key --lsign-key "$xlibre_fpr"
 rm -f /tmp/xlibre.asc
