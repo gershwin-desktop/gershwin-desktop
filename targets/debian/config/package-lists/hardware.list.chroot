@@ -1,7 +1,10 @@
 live-boot
 live-config
 
-xserver-xorg-video-all
+# The X server and its video drivers are NOT listed here -- XLibre replaces
+# Xorg, and its packages come from a third-party HTTPS repo that cannot be
+# reached this early in the build. 040-xlibre.chroot installs them instead; see
+# the comment at the top of that hook.
 mesa-utils
 mesa-vulkan-drivers
 libva2
@@ -15,8 +18,6 @@ wireless-tools
 alsa-utils
 
 # Everything marked with "#x86_64" (uname -m" will be installed on that architecture only
-#x86_64 xserver-xorg-video-intel
-#x86_64 xserver-xorg-video-amdgpu
 #x86_64 intel-media-va-driver-non-free 
 
 # Proprietary Nvidia drivers
@@ -29,5 +30,4 @@ parted
 
 qemu-guest-agent
 spice-vdagent
-xserver-xorg-video-qxl
 
