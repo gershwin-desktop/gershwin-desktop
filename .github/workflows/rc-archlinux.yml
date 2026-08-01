@@ -43,6 +43,9 @@ jobs:
       - name: Trust the XLibre package signing key
         run: |
           set -eu
+          # archlinux:latest ships a populated keyring but no local secret key, and
+          # --lsign-key needs one to sign with. Idempotent on an initialised keyring.
+          pacman-key --init
           fpr=0C92313001CFCA27627B9098B97F7C613F359424
           curl -fsSL -o /tmp/xlibre.asc https://xlibre-arch.github.io/xlibre-archlinux.asc
           gpg --show-keys --with-colons /tmp/xlibre.asc \
