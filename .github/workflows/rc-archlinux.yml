@@ -35,6 +35,25 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # XLibre packages are individually signed, so pacman must trust the key
+      # before pacstrap pulls them. Fetched rather than committed: it is served
+      # from the same GitHub that hosts this checkout, so vendoring would not
+      # remove a trust domain. Pinned by FULL fingerprint -- a swapped or
+      # tampered key fails the build here instead of being silently trusted.
+      - name: Trust the XLibre package signing key
+        run: |
+          set -eu
+          # archlinux:latest ships a populated keyring but no local secret key, and
+          # --lsign-key needs one to sign with. Idempotent on an initialised keyring.
+          pacman-key --init
+          fpr=0C92313001CFCA27627B9098B97F7C613F359424
+          curl -fsSL -o /tmp/xlibre.asc https://xlibre-arch.github.io/xlibre-archlinux.asc
+          gpg --show-keys --with-colons /tmp/xlibre.asc \
+            | awk -F: '/^fpr:/{print $10}' | grep -qx "$fpr"
+          pacman-key --add /tmp/xlibre.asc
+          pacman-key --lsign-key "$fpr"
+          rm -f /tmp/xlibre.asc
+
       - name: Build ISO with mkarchiso
         run: |
           set -e
