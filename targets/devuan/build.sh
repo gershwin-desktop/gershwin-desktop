@@ -173,6 +173,8 @@ chroot "${WORK}/rootfs" update-rc.d avahi-daemon defaults
 chroot "${WORK}/rootfs" update-rc.d ssh defaults
 
 # Enable boot splash
+# Plymouth is now handled by install-plymouth.sh in gershwin-system
+# (invoked from SystemPrepare.sh); these were the old manual steps:
 # chroot "${WORK}/rootfs" update-rc.d plymouth defaults
 
 # Configure boot splash theme

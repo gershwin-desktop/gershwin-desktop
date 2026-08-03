@@ -64,4 +64,6 @@ EOF
 umount /proc
 
 # Set boot splash theme
-plymouth-set-default-theme spinner -R
+# Now handled by install-plymouth.sh in gershwin-system (invoked from
+# SystemPrepare.sh), which sets the spinner theme on supported distributions.
+# plymouth-set-default-theme spinner -R
