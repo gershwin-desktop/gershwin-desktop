@@ -1,4 +1,7 @@
 #!/bin/bash
 set -e
 
-plymouth-set-default-theme -R spinner
+# Plymouth theme setup is now handled by install-plymouth.sh in
+# gershwin-system (invoked from SystemPrepare.sh), which detects the
+# distribution and installs/configures plymouth automatically.
+# plymouth-set-default-theme -R spinner
