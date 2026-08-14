@@ -27,6 +27,8 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
  # pkg install gershwin-desktop
 ```
 
+Please see the [wiki](https://github.com/gershwin-desktop/gershwin-desktop/wiki) for more information.
+
 ## Building the live ISOs
 
 This repository builds the Gershwin live ISOs for several base OSes (FreeBSD,
@@ -38,6 +40,10 @@ boot/login/screenshot gate and one publish step.
 To **add a new flavor** (e.g. Artix) or change how the ISOs are built, see
 **[docs/ADDING-A-FLAVOR.md](docs/ADDING-A-FLAVOR.md)**. (Claude Code users: the
 repo also ships an `add-iso-flavor` skill that automates the same procedure.)
+
+## Wiki
+
+The [Gershwin Desktop wiki](https://github.com/gershwin-desktop/gershwin-desktop/wiki) contains more information, including changelogs.
 
 ## Community Support
 
