@@ -22,9 +22,21 @@ inputs:
     required: false
     default: artifacts
   arch:
-    description: CPU arch of the ISO (amd64 supported today; arm64 is a TODO).
+    description: >
+      CPU arch of the ISO: amd64 or arm64. arm64 boots the aarch64 `virt`
+      machine under AAVMF, and needs a KVM-capable arm64 runner
+      (ubuntu-24.04-arm): TCG-emulating a whole desktop boot does not fit in
+      this job's timeout.
     required: false
     default: amd64
+  artifact-suffix:
+    description: >
+      Appended to the desktop-screenshot / boot-artifacts artifact names. Leave
+      empty for a single-arch flavor. A flavor that gates more than one arch in
+      ONE workflow must set this (e.g. -arm64): artifact names are unique per
+      run, so the second uploader would otherwise fail the job.
+    required: false
+    default: ''
   soft-fail:
     description: >
       When 'true' (the dev channel) do NOT block on gate failures — publish the
@@ -42,34 +54,78 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf socat imagemagick tesseract-ocr
+        COMMON="socat imagemagick tesseract-ocr"
+        if [ "${{ inputs.arch }}" = "arm64" ]; then
+          # qemu-efi-aarch64 supplies AAVMF_CODE.fd / AAVMF_VARS.fd, the arm64
+          # equivalent of OVMF. There is no -bios shortcut on `virt`: UEFI is
+          # attached as two pflash banks, so the vars bank has to be writable.
+          sudo apt-get install -y --no-install-recommends qemu-system-arm qemu-efi-aarch64 $COMMON
+        else
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf $COMMON
+        fi
 
     - name: Launch VM (serial + VGA + monitor)
       shell: bash
       run: |
         set -e
-        if [ "${{ inputs.arch }}" != "amd64" ]; then
-          echo "::error::screenshot-gate currently supports amd64 only (got '${{ inputs.arch }}')"
-          exit 1
-        fi
+        case "${{ inputs.arch }}" in
+          amd64|arm64) ;;
+          *) echo "::error::screenshot-gate supports amd64 and arm64 (got '${{ inputs.arch }}')"; exit 1 ;;
+        esac
         ISO=$(ls "${{ inputs.iso-dir }}"/*.iso 2>/dev/null | head -1)
         [ -n "$ISO" ] || { echo "::error::no ISO in ${{ inputs.iso-dir }}"; ls -laR "${{ inputs.iso-dir }}"; exit 1; }
         mkdir -p tests screenshot
-        OVMF=/usr/share/ovmf/OVMF.fd
-        [ -f "$OVMF" ] || OVMF=/usr/share/OVMF/OVMF_CODE.fd
-        ACCEL="-accel tcg -cpu qemu64"
         if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
-        [ -r /dev/kvm ] && [ -w /dev/kvm ] && ACCEL="-accel kvm -cpu host"
-        echo "ISO=$ISO accel=$ACCEL ovmf=$OVMF"
-        nohup qemu-system-x86_64 \
-          -machine q35 -m 4G -smp 2 $ACCEL -bios "$OVMF" \
-          -cdrom "$ISO" -boot d \
-          -vga std \
-          -serial file:tests/serial.log \
-          -monitor unix:tests/mon.sock,server,nowait \
-          -nic user,model=e1000 \
-          -display none -no-reboot \
-          > tests/qemu.stdout 2>&1 &
+
+        if [ "${{ inputs.arch }}" = "arm64" ]; then
+          # UEFI on `virt` is two pflash banks, and QEMU requires each to be
+          # exactly the file's declared size -- hence a private writable copy of
+          # the vars bank rather than pointing at the read-only system one.
+          AAVMF_CODE=/usr/share/AAVMF/AAVMF_CODE.fd
+          AAVMF_VARS=/usr/share/AAVMF/AAVMF_VARS.fd
+          [ -f "$AAVMF_CODE" ] || AAVMF_CODE=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+          [ -f "$AAVMF_VARS" ] || AAVMF_VARS=/usr/share/qemu-efi-aarch64/QEMU_VARS.fd
+          [ -f "$AAVMF_CODE" ] || { echo "::error::no AAVMF firmware found"; ls -l /usr/share/AAVMF /usr/share/qemu-efi-aarch64 2>/dev/null; exit 1; }
+          cp "$AAVMF_VARS" tests/aavmf_vars.fd
+          # cortex-a72 is the safe TCG fallback; -cpu host needs KVM. A non-KVM
+          # arm64 run is expected to blow the job timeout -- that is why the
+          # caller pins an arm64 runner -- so say so loudly rather than hang.
+          ACCEL="-accel tcg -cpu cortex-a72"
+          [ -r /dev/kvm ] && [ -w /dev/kvm ] && ACCEL="-accel kvm -cpu host"
+          case "$ACCEL" in *tcg*) echo "::warning::arm64 gate running under TCG (no /dev/kvm) -- expect this to be very slow" ;; esac
+          echo "ISO=$ISO accel=$ACCEL firmware=$AAVMF_CODE"
+          # `virt` has no IDE and no PS/2: the ISO arrives as virtio-blk and the
+          # keyboard (which the whole gate drives via monitor sendkey) has to be
+          # a USB HID behind xHCI, or there is nothing to type into.
+          nohup qemu-system-aarch64 \
+            -machine virt -m 4G -smp 2 $ACCEL \
+            -drive if=pflash,format=raw,unit=0,readonly=on,file="$AAVMF_CODE" \
+            -drive if=pflash,format=raw,unit=1,file=tests/aavmf_vars.fd \
+            -drive if=none,id=cd0,format=raw,readonly=on,media=cdrom,file="$ISO" \
+            -device virtio-blk-pci,drive=cd0,bootindex=0 \
+            -device virtio-gpu-pci \
+            -device qemu-xhci -device usb-kbd \
+            -serial file:tests/serial.log \
+            -monitor unix:tests/mon.sock,server,nowait \
+            -nic user,model=virtio-net-pci \
+            -display none -no-reboot \
+            > tests/qemu.stdout 2>&1 &
+        else
+          OVMF=/usr/share/ovmf/OVMF.fd
+          [ -f "$OVMF" ] || OVMF=/usr/share/OVMF/OVMF_CODE.fd
+          ACCEL="-accel tcg -cpu qemu64"
+          [ -r /dev/kvm ] && [ -w /dev/kvm ] && ACCEL="-accel kvm -cpu host"
+          echo "ISO=$ISO accel=$ACCEL ovmf=$OVMF"
+          nohup qemu-system-x86_64 \
+            -machine q35 -m 4G -smp 2 $ACCEL -bios "$OVMF" \
+            -cdrom "$ISO" -boot d \
+            -vga std \
+            -serial file:tests/serial.log \
+            -monitor unix:tests/mon.sock,server,nowait \
+            -nic user,model=e1000 \
+            -display none -no-reboot \
+            > tests/qemu.stdout 2>&1 &
+        fi
         echo $! > tests/qemu.pid
         for i in $(seq 1 30); do [ -S tests/mon.sock ] && break; sleep 1; done
         echo "qemu pid $(cat tests/qemu.pid); monitor: $(ls -l tests/mon.sock 2>/dev/null || echo MISSING)"
@@ -105,7 +161,7 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: desktop-screenshot
+        name: desktop-screenshot${{ inputs.artifact-suffix }}
         path: |
           screenshot/gershwin-on-${{ inputs.flavor }}.png
           screenshot/gate-failures.txt
@@ -124,7 +180,7 @@ runs:
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
-        name: boot-artifacts
+        name: boot-artifacts${{ inputs.artifact-suffix }}
         path: |
           tests/serial.log
           tests/frames/

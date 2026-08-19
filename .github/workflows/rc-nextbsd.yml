@@ -23,9 +23,23 @@ permissions:
 
 jobs:
   build:
-    name: build (nextbsd amd64)
-    runs-on: ubuntu-latest
+    name: build (nextbsd ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            vm_arch: x86_64
+          # Built on a native arm64 runner so the FreeBSD aarch64 guest gets KVM.
+          # vmactions' README recommends staying on ubuntu-latest and emulating,
+          # but that advice predates free arm64 runners and costs a TCG-emulated
+          # world build here -- which does not fit in 240 minutes.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            vm_arch: aarch64
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +49,7 @@ jobs:
         uses: vmactions/freebsd-vm@v1
         with:
           release: "15.1"
+          arch: ${{ matrix.vm_arch }}
           usesh: true
           sync: rsync
           copyback: true
@@ -44,7 +59,7 @@ jobs:
             pkg install -y git
           run: |
             set -e
-            export TARGET_ARCH=amd64
+            export TARGET_ARCH=${{ matrix.arch }}
             export CHANNEL=rc
             export GERSHWIN_REF=main
             /bin/sh ./targets/nextbsd/build.sh
@@ -54,24 +69,36 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: gershwin-nextbsd-amd64
+          name: gershwin-nextbsd-${{ matrix.arch }}
           path: out
           retention-days: 1
           if-no-files-found: error
 
   test:
-    name: boot + login + screenshot (nextbsd amd64)
+    name: boot + login + screenshot (nextbsd ${{ matrix.arch }})
     needs: [build]
     if: ${{ needs.build.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            suffix: ''
+          # Native arm64 runner: the gate boots a whole desktop, and under TCG
+          # that does not finish inside timeout-minutes.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            suffix: '-arm64'
     steps:
       - uses: actions/checkout@v4
 
       - name: Download fresh build artifact
         uses: actions/download-artifact@v4
         with:
-          name: gershwin-nextbsd-amd64
+          name: gershwin-nextbsd-${{ matrix.arch }}
           path: artifacts
 
       # The whole boot -> greeter -> admin login -> desktop-render gate lives in
@@ -82,7 +109,8 @@ jobs:
         with:
           flavor: nextbsd
           iso-dir: artifacts
-          arch: amd64
+          arch: ${{ matrix.arch }}
+          artifact-suffix: ${{ matrix.suffix }}
 
   publish:
     name: publish nextbsd-rc
@@ -93,16 +121,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download ISO
+      - name: Download ISOs (both arches)
         uses: actions/download-artifact@v4
         with:
-          name: gershwin-nextbsd-amd64
+          pattern: gershwin-nextbsd-*
+          merge-multiple: true
           path: dist
 
       - name: Download screenshot
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
+          # amd64's frame only -- both arches emit the same filename, so this is
+          # a deliberate pick rather than a merge. arm64's frame stays in its own
+          # artifact as gate evidence.
           name: desktop-screenshot
           path: screenshot
 
@@ -127,7 +159,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
-            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+            --jq '.artifacts[] | select(.name | startswith("boot-artifacts") | not) | .id' \
           | while read -r id; do
               gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
                 && echo "deleted artifact $id"

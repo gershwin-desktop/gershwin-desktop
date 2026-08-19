@@ -43,6 +43,51 @@ source of truth. This skill is the operational checklist and the gotchas.
    ref + `GERSHWIN_BRANCH=dev` + `CHANNEL=dev`).
 4. Validate before pushing: `python3 -c "import yaml,glob;[yaml.safe_load(open(f)) for f in glob.glob('.github/workflows/*.yml')]"` and `sh -n` any build.sh.
 
+## Adding an ARCH to an existing flavor
+
+Not the same job as adding a flavor. Do it as a **matrix inside the flavor's
+existing two workflows** — do not add `rc-<flavor>-<arch>.yml`; rule 2 above is
+two workflows per flavor, full stop. Matrix `build` and `test` over
+`{arch, runner, ...}` with `fail-fast: false` so one arch cannot mask the other.
+
+- **`targets/*/build.sh` may already be arch-aware.** nextbsd's was: it maps
+  `amd64|x86_64 -> x86_64` / `arm64|aarch64 -> aarch64` for the release label,
+  keeps `aarch64` for the pkg ABI, and already skips `cdboot` (BIOS-only) so
+  arm64 ISOs come out UEFI-only. Read it before writing anything.
+- **Artifact names inside a shared composite action are global per run.** Two
+  matrix legs both uploading `desktop-screenshot` fail the job outright.
+  `screenshot-gate` therefore takes `artifact-suffix` (default `''`, so
+  single-arch flavors are untouched); a multi-arch caller MUST pass it.
+- **Then fix the cleanup filter.** It keys off the literal name — once artifacts
+  are suffixed it must be `select(.name | startswith("boot-artifacts") | not)`,
+  or `boot-artifacts-<arch>` gets deleted on failure, which is exactly when you
+  need it.
+- **One screenshot per release.** Every arch writes the same
+  `gershwin-on-<flavor>.png`, so merging arches into one directory is a coin
+  toss. Pick one arch's frame for the release body on purpose; the others stay
+  in their own artifacts as gate evidence.
+
+## arm64 specifics (learned the hard way)
+
+- **Use `runs-on: ubuntu-24.04-arm` for both build and gate.** Both need KVM:
+  the gate boots an entire desktop and the build does a world+packages run, and
+  neither fits its timeout under TCG. vmactions' README says to stay on
+  `ubuntu-latest` with `arch: aarch64` and warns against arm runners — that
+  guidance is about their own VM tuning and predates free arm64 runners; it is
+  not a reason to emulate a 240-minute build.
+- **QEMU `virt` is not q35.** Porting the gate needed four changes, each of
+  which is a silent hang if missed:
+  - no IDE, so `-cdrom` is wrong: attach the ISO as
+    `-drive if=none,...,media=cdrom` + `-device virtio-blk-pci,bootindex=0`;
+  - no PS/2, so monitor `sendkey` reaches nothing without
+    `-device qemu-xhci -device usb-kbd` — and the whole gate is sendkey-driven;
+  - no `-bios`: UEFI is two pflash banks, and the vars bank must be a writable
+    **copy** of `AAVMF_VARS.fd` (QEMU demands the exact declared size);
+  - no `-vga std`: use `-device virtio-gpu-pci`.
+- **Arch tokens differ by layer, deliberately.** Workflow/matrix and
+  `TARGET_ARCH` use `amd64`/`arm64`; pkg ABI uses `aarch64`; ISO filenames use
+  `x86_64`/`aarch64` (rule: never put `amd64`/`arm64` in a filename).
+
 ## Verify loop
 
 - Push to `main`; the flavor's build triggers (build → gate → publish → cleanup).
