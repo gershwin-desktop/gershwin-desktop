@@ -192,7 +192,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
-            --jq '.artifacts[] | select(.name != "boot-artifacts") | .id' \
+            --jq '.artifacts[] | select(.name != "boot-artifacts" and .name != "nextbsd-verbose-boot-log") | .id' \
           | while read -r id; do
               gh api -X DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$id" \
                 && echo "deleted artifact $id"
