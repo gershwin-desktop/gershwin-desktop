@@ -25,6 +25,21 @@ inputs:
     description: CPU arch of the ISO (amd64 supported today; arm64 is a TODO).
     required: false
     default: amd64
+  diagnostics:
+    description: >
+      When 'true', collect deep boot diagnostics for this flavor: drive the guest
+      serial console (verbose boot + dump Xorg.0.log and DRM/daemon state from
+      inside the guest) and keep tests/frames + serial logs as an artifact even
+      when the gate passes or soft-fails.
+
+      Default 'false'. This is deliberately opt-in and off for everything else:
+      the serial script speaks to a FreeBSD loader and to launchd's
+      org.nextbsd.getty.console, so on a Linux flavor it would only ever time
+      out, and uploading frames for every flavor on every run is storage nobody
+      asked for. Turn it on for a flavor that is actively being debugged.
+    required: false
+    default: 'false'
+
   soft-fail:
     description: >
       When 'true' (the dev channel) do NOT block on gate failures — publish the
@@ -86,6 +101,7 @@ runs:
     # its polling loop. Backgrounded and `|| true` so a guest that ignores the
     # serial console behaves exactly as it did before this step existed.
     - name: serial console (verbose boot + in-guest diagnostics)
+      if: ${{ inputs.diagnostics == 'true' }}
       shell: bash
       run: |
         for i in $(seq 1 30); do [ -S tests/serial.sock ] && break; sleep 1; done
@@ -142,13 +158,21 @@ runs:
         [ -f tests/qemu.pid ] && kill "$(cat tests/qemu.pid)" 2>/dev/null || true
 
     - name: Upload boot artifacts
-      # ALWAYS, not just on failure. In soft-fail mode (the dev channel) the gate
-      # records its failures and still exits 0, so `failure()` never fired and the
-      # runs that most needed debugging were the exact ones that uploaded nothing:
-      # a broken dev ISO published green, with no frames and no serial log to look
-      # at afterwards. On a passing run boot-test exits at the first graphical
-      # frame, so this costs a handful of files.
-      if: ${{ always() }}
+      # Two conditions, not one.
+      #
+      # failure() is the original behaviour and stays for every flavor: a gate
+      # that hard-fails uploads what it saw.
+      #
+      # It is not sufficient on its own, which is the bug this fixes. In
+      # soft-fail mode -- the dev channel -- the gate records its failures and
+      # still exits 0, so failure() never fires. The runs that most needed
+      # debugging were the exact ones that uploaded nothing: a broken dev ISO
+      # published green, with no frames and no serial log to look at afterwards.
+      #
+      # So `diagnostics` opts a flavor into keeping them regardless. It is off by
+      # default: uploading frames for five flavors on every run is storage nobody
+      # asked for.
+      if: ${{ failure() || inputs.diagnostics == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: boot-artifacts

@@ -94,6 +94,11 @@ jobs:
           iso-dir: artifacts
           arch: amd64
           soft-fail: true
+          # Opt this flavor into deep boot diagnostics: drive the serial console
+          # (verbose boot + Xorg.0.log from inside the guest) and keep the frames
+          # and serial logs even when the gate soft-fails. nextbsd only -- the
+          # serial script speaks to a FreeBSD loader and launchd's getty.
+          diagnostics: true
 
   publish:
     name: publish nextbsd-dev
