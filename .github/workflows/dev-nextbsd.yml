@@ -95,6 +95,60 @@ jobs:
           arch: amd64
           soft-fail: true
 
+  # Diagnostic only: boots the SAME ISO a second time with the kernel console
+  # unmuted, and keeps the transcript. It gates nothing -- publish does not
+  # depend on it and it cannot fail the run.
+  #
+  # It exists because the screenshot gate can say "no graphical screen within
+  # 600s" and nothing more: the shipped image sets boot_mutemsgs="YES"
+  # (nextbsd#363), so its serial log stops at "-- Muting boot messages --" and
+  # every kext attach, DRM probe and launchd message after early init is
+  # invisible. Diagnosing the dev image that has been booting to a text console
+  # meant reading 67 framebuffer dumps to notice 65 were identical.
+  #
+  # RB_VERBOSE bypasses that mute in the kernel, which is what
+  # nextbsd/nextbsd's tests/iso-boot-test.sh already relies on; this runs the
+  # same loader handshake.
+  #
+  # nextbsd only, on purpose. The loader dance and the mute it works around are
+  # FreeBSD/NextBSD specific, and putting this in the shared screenshot-gate
+  # would rebuild every flavor's ISO on every change to it.
+  verbose-boot:
+    name: verbose boot log (nextbsd amd64, diagnostic)
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download fresh build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gershwin-nextbsd-amd64
+          path: artifacts
+
+      - name: Install qemu + ovmf + expect
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf expect
+
+      - name: Boot verbosely and capture the console
+        run: |
+          ISO=$(ls artifacts/*.iso 2>/dev/null | head -1)
+          [ -n "$ISO" ] || { echo "no ISO in artifacts"; ls -laR artifacts; exit 0; }
+          sh targets/nextbsd/tests/verbose-boot.sh "$ISO"
+
+      - name: Upload verbose boot log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextbsd-verbose-boot-log
+          path: tests/verbose-boot.log
+          retention-days: 7
+          if-no-files-found: ignore
+
   publish:
     name: publish nextbsd-dev
     # Public release is gated on boot + login + screenshot all passing.
