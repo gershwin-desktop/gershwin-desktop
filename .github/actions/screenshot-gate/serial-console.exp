@@ -1,0 +1,113 @@
+#!/usr/bin/expect -f
+# serial-console.exp — drive the guest's serial console from outside.
+#
+# WHY THIS EXISTS
+#
+# The gate could see that the VM never reached a graphical screen, and nothing
+# else. Diagnosing that took reading 67 framebuffer dumps to notice 65 were
+# byte-identical, because the two things that would have answered it in one
+# line were both unavailable:
+#
+#   - the serial log stops at "-- Muting boot messages --", so nothing after
+#     early init is on it
+#   - /var/log/Xorg.0.log lives in the live ISO's memory overlay and is gone
+#     the moment the VM is shut down
+#
+# So this connects to the serial chardev and does two things the gate could not
+# do before: asks the loader for a verbose boot, and -- once the guest is up --
+# logs in on the console and dumps the logs that explain a missing desktop.
+#
+# BEST EFFORT, ALWAYS. Every wait is bounded and every failure path exits 0.
+# This script is diagnostics: it must never be the reason a gate fails, and a
+# guest that ignores it entirely should look exactly like today.
+set timeout 90
+log_user 1
+
+set sock [lindex $argv 0]
+if {$sock eq ""} { puts "serial-console: no socket given"; exit 0 }
+
+if {[catch {spawn socat -,raw,echo=0 UNIX-CONNECT:$sock} err]} {
+    puts "serial-console: cannot attach to $sock: $err"
+    exit 0
+}
+
+# ---------------------------------------------------------------------------
+# 1. Loader: ask for a verbose boot.
+#
+# The countdown is short, so this watches for the prompt rather than sleeping.
+# Any key stops the timer and drops to the loader prompt; "boot -v" then leaves
+# the kernel's verbose flag set for the whole boot.
+# ---------------------------------------------------------------------------
+set got_loader 0
+expect {
+    -re {Hit \[Enter\] to boot immediately, or any other key for command prompt} {
+        send " "
+        set got_loader 1
+    }
+    -re {OK $}      { set got_loader 1 }
+    timeout         { puts "\nserial-console: loader prompt not seen — continuing with a normal boot" }
+    eof             { puts "\nserial-console: serial closed during loader"; exit 0 }
+}
+
+if {$got_loader} {
+    expect {
+        -re {OK $}  { }
+        timeout     { puts "\nserial-console: no loader prompt after keypress" }
+    }
+    # boot_verbose is what the kernel reads; -v covers loaders that ignore it.
+    send "set boot_verbose=1\r"
+    expect -re {OK $} { } timeout { }
+    send "boot -v\r"
+    puts "\nserial-console: requested verbose boot"
+}
+
+# ---------------------------------------------------------------------------
+# 2. Console login, then dump what explains a missing desktop.
+#
+# getty runs on /dev/console (org.nextbsd.getty.console), so a login prompt
+# should arrive here once launchd is up. It may not -- if the console is
+# vidconsole-only the prompt lands on VGA instead and this simply times out,
+# which is why every branch below still exits 0.
+# ---------------------------------------------------------------------------
+set timeout 420
+expect {
+    -re {login: $}      { }
+    -re {(#|\$) $}      { puts "\nserial-console: already at a shell"; }
+    timeout             { puts "\nserial-console: no console login within timeout"; exit 0 }
+    eof                 { puts "\nserial-console: serial closed before login"; exit 0 }
+}
+
+send "root\r"
+set timeout 30
+expect {
+    -re {[Pp]assword: $} { send "\r" }
+    -re {(#|\$) $}       { }
+    timeout              { }
+}
+expect {
+    -re {(#|\$) $}  { }
+    timeout         { puts "\nserial-console: no shell after login"; exit 0 }
+}
+
+# Markers make these greppable in serial.log, and copying Xorg's log to a file
+# the artifact step collects is the only way it survives VM shutdown.
+send "echo '=== GATE-DIAG BEGIN ==='\r"
+expect -re {(#|\$) $} { } timeout { }
+
+foreach cmd {
+    "uname -a"
+    "ls -la /dev/dri/ 2>&1 | head -20"
+    "kextstat 2>/dev/null | head -30"
+    "launchctl list 2>/dev/null | grep -iE 'loginwindow|dshelper|gdomap|dbus' || echo 'no gershwin daemons listed'"
+    "ps ax | grep -E '[X]org|[L]oginWindow' || echo 'no Xorg/LoginWindow running'"
+    "tail -n 200 /var/log/Xorg.0.log 2>/dev/null || echo 'NO /var/log/Xorg.0.log'"
+    "grep -aiE '\\(EE\\)|no screens|Fatal' /var/log/Xorg.0.log 2>/dev/null | tail -30 || true"
+    "tail -n 80 /var/log/system.log 2>/dev/null || true"
+} {
+    send "$cmd\r"
+    expect -re {(#|\$) $} { } timeout { }
+}
+
+send "echo '=== GATE-DIAG END ==='\r"
+expect -re {(#|\$) $} { } timeout { }
+exit 0

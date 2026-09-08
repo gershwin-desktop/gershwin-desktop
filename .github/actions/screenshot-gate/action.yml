@@ -42,7 +42,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf socat imagemagick tesseract-ocr
+        sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf socat imagemagick tesseract-ocr expect
 
     - name: Launch VM (serial + VGA + monitor)
       shell: bash
@@ -65,7 +65,8 @@ runs:
           -machine q35 -m 4G -smp 2 $ACCEL -bios "$OVMF" \
           -cdrom "$ISO" -boot d \
           -vga std \
-          -serial file:tests/serial.log \
+          -chardev socket,id=gser,path=tests/serial.sock,server=on,wait=off,logfile=tests/serial.log \
+          -serial chardev:gser \
           -monitor unix:tests/mon.sock,server,nowait \
           -nic user,model=e1000 \
           -display none -no-reboot \
@@ -73,6 +74,28 @@ runs:
         echo $! > tests/qemu.pid
         for i in $(seq 1 30); do [ -S tests/mon.sock ] && break; sleep 1; done
         echo "qemu pid $(cat tests/qemu.pid); monitor: $(ls -l tests/mon.sock 2>/dev/null || echo MISSING)"
+
+    # Attaches to the serial console and runs in the BACKGROUND for the rest of
+    # the gate. Two jobs: ask the loader for a verbose boot (the console goes
+    # quiet after early init, so a normal boot tells us almost nothing), and
+    # once the guest is up, log in and dump /var/log/Xorg.0.log plus the DRM and
+    # daemon state into serial.log.
+    #
+    # Started here, not inside boot-test.sh, because the loader countdown is
+    # only a couple of seconds -- it has to be attached before boot-test starts
+    # its polling loop. Backgrounded and `|| true` so a guest that ignores the
+    # serial console behaves exactly as it did before this step existed.
+    - name: serial console (verbose boot + in-guest diagnostics)
+      shell: bash
+      run: |
+        for i in $(seq 1 30); do [ -S tests/serial.sock ] && break; sleep 1; done
+        if [ ! -S tests/serial.sock ]; then
+          echo "serial socket never appeared — skipping serial diagnostics"
+          exit 0
+        fi
+        nohup expect "${{ github.action_path }}/serial-console.exp" tests/serial.sock \
+          > tests/serial-console.log 2>&1 &
+        echo "serial-console attached (pid $!)"
 
     - name: boot-test (wait for greeter)
       shell: bash
@@ -119,14 +142,19 @@ runs:
         [ -f tests/qemu.pid ] && kill "$(cat tests/qemu.pid)" 2>/dev/null || true
 
     - name: Upload boot artifacts
-      # Only on failure — these frames/serial logs are for debugging a broken
-      # gate; on success they're just wasted storage.
-      if: ${{ failure() }}
+      # ALWAYS, not just on failure. In soft-fail mode (the dev channel) the gate
+      # records its failures and still exits 0, so `failure()` never fired and the
+      # runs that most needed debugging were the exact ones that uploaded nothing:
+      # a broken dev ISO published green, with no frames and no serial log to look
+      # at afterwards. On a passing run boot-test exits at the first graphical
+      # frame, so this costs a handful of files.
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: boot-artifacts
         path: |
           tests/serial.log
+          tests/serial-console.log
           tests/frames/
           tests/*.ppm
           screenshot/*.png
