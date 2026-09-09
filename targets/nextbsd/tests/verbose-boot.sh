@@ -119,6 +119,10 @@ if {\$got_login == 2} {
     foreach cmd {
         "echo '===== GATE-DIAG BEGIN ====='"
         "ls -la /dev/dri/ 2>&1"
+        "echo '----- DRM busid (how X learns a card is PCI) -----'"
+        "sysctl hw.dri 2>/dev/null | grep -i busid || echo 'NO hw.dri.*.busid sysctl'"
+        "sysctl dev.drm 2>/dev/null | grep -i PCI_ID || echo 'no dev.drm PCI_ID'"
+        "pkg query '%n-%v' libudev-devd 2>/dev/null || echo 'libudev-devd not installed'"
         "kextstat 2>/dev/null | head -20"
         "launchctl list 2>/dev/null | grep -iE 'loginwindow|dshelper|gdomap|dbus' || echo 'NO gershwin daemons listed'"
         "ps ax | grep -E '[X]org|[L]oginWindow' || echo 'NO Xorg/LoginWindow process'"
@@ -148,6 +152,16 @@ else
 fi
 echo "==> graphics/DRM lines, if any:"
 grep -aiE "drm|vgapci|bochs|kms" "$LOG" 2>/dev/null | head -25 || true
+echo "==> DRM busid — the one-bit readout of nextbsd/nextbsd#448:"
+if grep -aq "busid" "$LOG" 2>/dev/null; then
+    grep -a "busid" "$LOG" | head -4
+    if grep -aq "busid: platform:" "$LOG" 2>/dev/null; then
+        echo "    ^ platform: on a PCI GPU means X cannot correlate the platform"
+        echo "      entry with the PCI entry -> duplicate claim -> modeset(G0) -> fatal."
+    fi
+else
+    echo "    not captured"
+fi
 echo "==> in-guest diagnostics (the part that explains a missing desktop):"
 if grep -aq "GATE-DIAG BEGIN" "$LOG" 2>/dev/null; then
     sed -n '/GATE-DIAG BEGIN/,/GATE-DIAG END/p' "$LOG" 2>/dev/null | head -200
