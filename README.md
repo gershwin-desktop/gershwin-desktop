@@ -18,7 +18,7 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 
 ## Installation and testing
 
-* Gershwin can be installed in under a few minutes by using [gershwin-developer](https://github.com/gershwin-desktop/gershwin-developer), which builds and installs Gershwin from source on FreeBSD, GhostBSD, OpenBSD, Arch, Artix, Debian, Devuan and Void.
+* Gershwin can be installed in under a few minutes by using [gershwin-developer](https://github.com/gershwin-desktop/gershwin-developer), which builds and installs Gershwin from source on FreeBSD, GhostBSD, NextBSD, OpenBSD, Arch, Artix, Debian, Devuan and Void.
 
 * Testers can try a live ISO. Every flavor is now published from **this** repository. Download the newest build from the [tags page](https://github.com/gershwin-desktop/gershwin-desktop/tags), or pick one directly below:
 
