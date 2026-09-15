@@ -18,9 +18,19 @@ Gershwin offers Workspace, Terminal, TextEdit, System Preferences, a native Wind
 
 ## Installation and testing
 
-* Gershwin can be installed in under a few minutes by using [gershwin-build](https://github.com/gershwin-desktop/gershwin-build).
+* Gershwin can be installed in under a few minutes by using [gershwin-developer](https://github.com/gershwin-desktop/gershwin-developer) (formerly `gershwin-build`), which builds and installs Gershwin from source on FreeBSD, GhostBSD, OpenBSD, Arch, Artix, Debian, Devuan and Void.
 
-* Testers can try a [gershwin-on-freebsd live iso](https://github.com/gershwin-desktop/gershwin-on-freebsd/releases/tag/continuous), [gershwin-on-debian live iso](https://github.com/gershwin-desktop/gershwin-on-debian/releases/tag/continuous), or [gershwin-on-arch live iso](https://github.com/gershwin-desktop/gershwin-on-arch/releases/tag/continuous), or the [GhostBSD Gershwin Community Preview live iso](https://www.ghostbsd.org/download) (out of date).
+* Testers can try a live ISO. Every flavor is now published from **this** repository — the separate `gershwin-on-*` repos are gone. Download the newest build from the [tags page](https://github.com/gershwin-desktop/gershwin-desktop/tags), or pick one directly:
+
+  | Flavor | Release candidate (`rc`) | Development (`dev`) |
+  | --- | --- | --- |
+  | FreeBSD | [freebsd-rc](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/freebsd-rc) | [freebsd-dev](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/freebsd-dev) |
+  | NextBSD | [nextbsd-rc](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/nextbsd-rc) | [nextbsd-dev](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/nextbsd-dev) |
+  | Debian | [debian-rc](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/debian-rc) | [debian-dev](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/debian-dev) |
+  | Devuan | [devuan-rc](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/devuan-rc) | [devuan-dev](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/devuan-dev) |
+  | Arch Linux | [archlinux-rc](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/archlinux-rc) | [archlinux-dev](https://github.com/gershwin-desktop/gershwin-desktop/releases/tag/archlinux-dev) |
+
+  **rc** is built from the default branches of the Gershwin sources, **dev** from their `dev` branches. Each release is rolled forward continuously and carries a screenshot of the ISO booted to the desktop, taken by the same boot gate every flavor has to pass.
 
 * GhostBSD users can also install Gershwin by installing following package (currently not up to date):
 ```
