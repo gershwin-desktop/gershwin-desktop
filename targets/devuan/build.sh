@@ -153,7 +153,78 @@ chroot "${WORK}/rootfs" /bin/sh -ec "
     rm -rf /var/lib/apt/lists/*
 "
 
-# === Step 3b: Install Gershwin ===
+# === Step 3b: Build the NVIDIA kernel module + enable KMS (x86_64) ===
+# The nvidia packages themselves are in packages.list; this step does the two
+# things installing them cannot do by itself. Both failure modes are silent --
+# the build stays green and the ISO just has no working NVIDIA support -- so
+# each one gets an assert below.
+#
+#  1. DKMS has to be told WHICH kernel to build for. Inside the chroot "uname -r"
+#     is the build host's kernel (on CI, some -azure kernel), so the package's own
+#     autoinstall looks for headers that are not there, skips with a warning, and
+#     exits 0. Nothing is built for the kernel this ISO actually ships. Hence the
+#     explicit "dkms autoinstall -k".
+#
+#  2. KMS is off by default in 550 and has to be turned on with a module option --
+#     but Devuan/Debian RENAME the modules so several driver versions can coexist
+#     (dkms.conf: DEST_MODULE_NAME=nvidia-current*). The advice found everywhere
+#     upstream, "options nvidia-drm modeset=1", names a module that does not exist
+#     on this system, so it matches nothing and KMS stays off. It has to be set on
+#     nvidia-current-drm.
+if [ "$ARCH" = "amd64" ]; then
+    echo "==> Building NVIDIA kernel module..."
+
+    KVER=$(ls -1 "${WORK}/rootfs/lib/modules" | sort -V | tail -n 1)
+    [ -n "${KVER}" ] || { echo "No kernel in rootfs /lib/modules"; exit 1; }
+    echo "    target kernel: ${KVER}"
+
+    chroot "${WORK}/rootfs" /bin/sh -ec "dkms autoinstall -k '${KVER}'"
+
+    # Assert both of the above at once: the modules must exist for the SHIPPED
+    # kernel (not the host's) under the exact names the modprobe.d below uses, so
+    # a future driver rename fails the build instead of silently leaving KMS off.
+    # modinfo rather than a path check -- it does not hardcode dkms's install
+    # directory and it only succeeds once depmod has indexed the modules.
+    for m in nvidia-current nvidia-current-modeset nvidia-current-drm; do
+        chroot "${WORK}/rootfs" modinfo -k "${KVER}" "${m}" >/dev/null 2>&1 || {
+            echo "ERROR: module ${m} not available for ${KVER}" >&2; exit 1; }
+    done
+
+    # Fix for (2), plus the load path. nvidia.ko does not pull in the DRM/KMS
+    # module by itself, and the packaging's hook for that is
+    # /etc/modules-load.d/nvidia.conf -- a systemd path, and this is sysvinit. The
+    # softdep hangs the DRM module off udev's alias-driven modprobe of the GPU
+    # instead, which works under any init. fbdev=1 hands the framebuffer console
+    # to the module as well, so the VT is not left blank once KMS takes over.
+    cat > "${WORK}/rootfs"/etc/modprobe.d/gershwin-nvidia-kms.conf <<\EOF
+# Enable kernel modesetting for the NVIDIA driver.
+# The module is nvidia-current-drm, NOT nvidia-drm: Debian/Devuan rename the
+# modules (dkms.conf DEST_MODULE_NAME) so driver versions can coexist. The usual
+# "options nvidia-drm modeset=1" matches nothing here and leaves KMS off.
+options nvidia-current-drm modeset=1 fbdev=1
+softdep nvidia-current post: nvidia-current-drm
+EOF
+
+    # Rebuild the shipped kernel's initramfs so the nouveau blacklist that the
+    # nvidia packages install actually lands in it -- otherwise nouveau loads
+    # during early boot and claims the GPU before nvidia can bind. The packages
+    # ran update-initramfs against the build host's kernel, a no-op for this
+    # image. Must happen before Step 4 copies boot/initrd.img-* onto the ISO.
+    chroot "${WORK}/rootfs" update-initramfs -u -k "${KVER}"
+
+    # Headers were a build-time input only. dkms and the module source stay, so
+    # the installed system can rebuild after "apt install linux-headers-amd64".
+    # Anchored regex, not a glob: it has to take linux-headers-<ver>-common too,
+    # which the exact-version name misses.
+    chroot "${WORK}/rootfs" /bin/sh -ec "
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get purge -y '^linux-headers-.*'
+        apt-get clean
+        rm -rf /var/lib/apt/lists/*
+    "
+fi
+
+# === Step 3c: Install Gershwin ===
 echo "==> Installing Gershwin..."
 
 chroot "${WORK}/rootfs" /bin/sh -c "

@@ -84,6 +84,33 @@ libva2
 #x86_64 xserver-xlibre-video-amdgpu
 #x86_64 intel-media-va-driver-non-free
 
+# NVIDIA (x86_64 only)
+# nvidia-driver is the non-free userspace -- GLX/EGL/Vulkan plus nvidia_drv.so --
+# and it pulls nvidia-kernel-dkms, the proprietary kernel module, as the first
+# branch of its kernel-module alternation. The open modules
+# (nvidia-open-kernel-dkms) were considered and rejected for now: they need
+# Turing (GTX 16xx / RTX 20xx) or newer, which would leave every GTX 900/1000
+# card on the generic framebuffer. Both halves are equally non-free in userspace,
+# so "open" would have bought licensing cleanliness only on the kernel side.
+#
+# Installing the package is not enough on its own -- the module still has to be
+# BUILT for the kernel this image ships, and KMS still has to be switched on.
+# Both happen in the "NVIDIA kernel module" step in build.sh; see the comment
+# there for why neither can be done from this list.
+#
+# This works alongside XLibre because xserver-xlibre-core deliberately declares
+# "Provides: xserver-xorg-core (= 2:21.98), xorg-video-abi-25", which satisfies
+# xserver-xorg-video-nvidia's "xserver-xorg-core (<< 2:21.99)" dependency.
+#x86_64 nvidia-driver
+#x86_64 nvidia-kernel-dkms
+# Build inputs for the DKMS module. linux-headers-amd64 tracks linux-image-amd64
+# exactly (same source, same version), so the headers can never drift from the
+# kernel in the squashfs. build.sh purges the headers again once the module is
+# built; build-essential stays because Gershwin is compiled from source anyway.
+#x86_64 linux-headers-amd64
+#x86_64 build-essential
+#x86_64 dkms
+
 # Installer
 parted
 e2fsprogs
