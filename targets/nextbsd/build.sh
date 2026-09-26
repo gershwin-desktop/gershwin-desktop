@@ -254,6 +254,10 @@ chroot "$ROOTFS" /bin/sh -eu -c '
 # no directory to auth against.
 chroot "$ROOTFS" /bin/sh -c '. /System/Library/Makefiles/GNUstep.sh && dscli init'
 
+# Pre-populate admin user for livecd since dscli does not pre-populate for NextBSD anymore
+chroot "$ROOTFS" /bin/sh -c 'mkdir -P /Local/Users/admin'
+chroot "$ROOTFS" /bin/sh -c 'chown 5000:5000 /Local/Users/admin'
+
 # NB: create NO user account and never touch /etc/master.passwd. `dscli init`
 # above already provisioned the live 'admin' in DirectoryServices (uid/gid 5000,
 # noPassword, home /Local/Users/admin) and the greeter authenticates it via
