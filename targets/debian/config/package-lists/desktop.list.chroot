@@ -2,6 +2,7 @@ curl
 lsb-release
 tar
 sudo
+libnss-myhostname
 xterm
 git
 wget

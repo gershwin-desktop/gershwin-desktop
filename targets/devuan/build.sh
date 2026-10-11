@@ -188,6 +188,14 @@ grep -q '^lw:5:respawn:/System/Library/Scripts/LoginWindow.sh' "${WORK}/rootfs/e
 # Initialize directory services database
 chroot "${WORK}/rootfs" /System/Library/Tools/dscli init
 
+# The hostname can be changed on the running Live system, while /etc/hosts is
+# baked into the image and cannot know the new name. Without a resolver for it,
+# sudo fails with "unable to resolve host". libnss-myhostname answers for the
+# current hostname; it goes right after "files" so sudo does not wait on DNS.
+# -e/grep so the build fails if nsswitch.conf has an unexpected layout.
+chroot "${WORK}/rootfs" sed -i -E '/^hosts:/{/myhostname/!s/^hosts:([[:space:]]+)files/hosts:\1files myhostname/}' /etc/nsswitch.conf
+grep -Eq '^hosts:[[:space:]]+files myhostname' "${WORK}/rootfs/etc/nsswitch.conf"
+
 # Allow password authentication and empty password for sshd
 chroot "${WORK}/rootfs" sed -i 's/^[[:space:]#]*PasswordAuthentication[[:space:]]*.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 chroot "${WORK}/rootfs" sed -i 's/^[[:space:]#]*PermitEmptyPasswords[[:space:]]*.*/PermitEmptyPasswords yes/' /etc/ssh/sshd_config

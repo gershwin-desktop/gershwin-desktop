@@ -44,6 +44,8 @@ dhcpcd
 
 # Core utilities
 sudo
+# Resolves whatever hostname is set at runtime, so sudo does not fail after a rename
+libnss-myhostname
 curl
 wget
 git
