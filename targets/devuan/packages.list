@@ -45,6 +45,8 @@ dhcpcd
 # Core utilities
 sudo
 curl
+# bsdtar, which LoginWindow uses to unpack the on-demand CJK font
+libarchive-tools
 wget
 git
 make
