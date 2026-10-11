@@ -90,6 +90,30 @@ $PKG update -f
 $PKG install -y NextBSD-everything
 [ -x "$ROOTFS/sbin/launchd" ] || { echo "ERROR: NextBSD-everything install produced no /sbin/launchd" >&2; exit 1; }
 
+# Record exactly what NextBSD-everything laid down, so the pre-makefs check below
+# can prove none of it was evicted by the later Gershwin/pkglist.txt transactions.
+# Taken from the rootfs pkg db instead of a hardcoded list so it follows the
+# package set (arch-specific packages such as the amd64 kexts included).
+BASE_PKGS="$WORK/base-packages.txt"
+pkg -r "$ROOTFS" query '%n' | sort > "$BASE_PKGS"
+[ -s "$BASE_PKGS" ] || { echo "ERROR: NextBSD-everything install registered no packages" >&2; exit 1; }
+
+# Fail the build if any package in the given list is no longer registered in the
+# rootfs pkg db. Later pkg transactions run with ASSUME_ALWAYS_YES, so a file
+# conflict with a newly pulled-in port silently deinstalls the base package that
+# co-owns the path (once shipped an ISO without the kexts, green CI).
+assert_pkgs_installed() {
+    _missing=""
+    while read -r _p; do
+        pkg -r "$ROOTFS" info -e "$_p" || _missing="$_missing $_p"
+    done < "$1"
+    if [ -n "$_missing" ]; then
+        echo "ERROR: packages evicted from the rootfs during the build (pkg file conflict under ASSUME_ALWAYS_YES?):" >&2
+        for _p in $_missing; do echo "  $_p" >&2; done
+        exit 1
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # 2. Apple /private layout + runtime skeleton, then seed the pkg-free /etc.
 #    The package ships /private/etc but NOT the /etc,/var,/tmp -> private
@@ -311,6 +335,15 @@ rm -f "$ROOTFS/sbin/kldload" "$ROOTFS/sbin/kldunload" "$ROOTFS/sbin/kldstat" \
 # root-owned (pkg -r, chroot, and the overlay clones/cp all run as root here).
 echo "==> normalising launchd overlay ownership to root:wheel"
 chown -R 0:0 "$ROOTFS/System/Library/LaunchDaemons"
+
+# Last chance to catch a package evicted by the Gershwin build or pkglist.txt;
+# pkglist.txt entries must have survived the Gershwin build as well.
+echo "==> asserting base and pkglist.txt packages survived the build"
+assert_pkgs_installed "$BASE_PKGS"
+if [ -f "$CWD/pkglist.txt" ]; then
+    sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$CWD/pkglist.txt" > "$WORK/pkglist-names.txt"
+    assert_pkgs_installed "$WORK/pkglist-names.txt"
+fi
 
 # ---------------------------------------------------------------------------
 # 8-10. Repackage as a live ISO (nextbsd build.sh step 7 model, verbatim).
