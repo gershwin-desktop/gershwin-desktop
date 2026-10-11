@@ -1,0 +1,8 @@
+#!/bin/sh
+# The hostname can be changed on the running Live system, while /etc/hosts is
+# baked into the image and cannot know the new name. Without a resolver for it,
+# sudo fails with "unable to resolve host". libnss-myhostname answers for the
+# current hostname; it goes right after "files" so sudo does not wait on DNS.
+set -e
+sed -i -E '/^hosts:/{/myhostname/!s/^hosts:([[:space:]]+)files/hosts:\1files myhostname/}' /etc/nsswitch.conf
+grep -Eq '^hosts:[[:space:]]+files myhostname' /etc/nsswitch.conf
