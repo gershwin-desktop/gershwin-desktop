@@ -162,7 +162,6 @@ libjpeg-turbo
 libtiff
 libpng
 libicns
-imagemagick
 libxml2
 libxslt
 gnutls
