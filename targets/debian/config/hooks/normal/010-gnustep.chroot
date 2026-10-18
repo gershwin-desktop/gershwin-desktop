@@ -8,9 +8,11 @@ case "$a" in x86_64|i?86)p=grub-efi-amd64-bin;;aarch64|arm64)p=grub-efi-arm64-bi
 apt-get update && apt-get install -y grub2-common "$p"
 
 # https://github.com/gershwin-desktop/gershwin-developer
-git clone -b "${GERSHWIN_REF:-main}" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
+# --depth 1 and SHALLOW=1: the image keeps the sources but not their git
+# history, which is several hundred MB that git packs keep incompressible.
+git clone --depth 1 -b "${GERSHWIN_REF:-main}" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
 /Developer/Library/Scripts/bootstrap.sh
-PINNED=1 BRANCH="${GERSHWIN_BRANCH:-}" /Developer/Library/Scripts/checkout.sh
+SHALLOW=1 PINNED=1 BRANCH="${GERSHWIN_BRANCH:-}" /Developer/Library/Scripts/checkout.sh
 cd /Developer && sudo -E make install
 
 . /System/Library/Makefiles/GNUstep.sh

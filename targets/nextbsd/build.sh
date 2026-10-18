@@ -218,6 +218,8 @@ fi
 #    FreeBSD repo configured in step 3.
 # ---------------------------------------------------------------------------
 echo "==> chroot build: Gershwin -> /System"
+# SHALLOW=1: the image keeps the sources but not their git history, which is
+# several hundred MB that git packs keep incompressible (see checkout.sh).
 mount -t devfs devfs "$ROOTFS/dev"
 cp /etc/resolv.conf "$ROOTFS/private/etc/resolv.conf"
 chroot "$ROOTFS" /bin/sh -eu -c '
@@ -225,7 +227,7 @@ chroot "$ROOTFS" /bin/sh -eu -c '
     git clone --depth 1 -b '"$GERSHWIN_REF"' '"$GERSHWIN_REPO"' /Developer
     cd /Developer
     sh Library/Scripts/bootstrap.sh
-    BRANCH='"$GERSHWIN_BRANCH"' sh Library/Scripts/checkout.sh
+    SHALLOW=1 BRANCH='"$GERSHWIN_BRANCH"' sh Library/Scripts/checkout.sh
     make install
 '
 [ -d "$ROOTFS/System/Library" ] || { echo "ERROR: /System was not produced" >&2; exit 1; }
