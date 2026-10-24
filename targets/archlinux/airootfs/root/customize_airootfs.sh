@@ -30,9 +30,11 @@ rm -f /tmp/xlibre.asc
 mount -t proc proc /proc
 
 # https://github.com/gershwin-desktop/gershwin-developer
-git clone -b "${GERSHWIN_REF:-main}" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
+# --depth 1 and SHALLOW=1: the image keeps the sources but not their git
+# history, which is several hundred MB that git packs keep incompressible.
+git clone --depth 1 -b "${GERSHWIN_REF:-main}" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
 /Developer/Library/Scripts/bootstrap.sh
-BRANCH="${GERSHWIN_BRANCH:-}" /Developer/Library/Scripts/checkout.sh
+SHALLOW=1 BRANCH="${GERSHWIN_BRANCH:-}" /Developer/Library/Scripts/checkout.sh
 cd /Developer && sudo -E make install
 
 . /System/Library/Makefiles/GNUstep.sh

@@ -227,10 +227,13 @@ fi
 # === Step 3c: Install Gershwin ===
 echo "==> Installing Gershwin..."
 
+# --depth 1 and SHALLOW=1: the image keeps the sources but not their git
+# history, which is several hundred MB that git packs keep incompressible.
+
 chroot "${WORK}/rootfs" /bin/sh -c "
-    git clone -b \"${GERSHWIN_REF}\" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
+    git clone --depth 1 -b \"${GERSHWIN_REF}\" https://github.com/gershwin-desktop/gershwin-developer.git /Developer
     /Developer/Library/Scripts/bootstrap.sh
-    BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh
+    SHALLOW=1 BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh
     cd /Developer && make install
 "
 

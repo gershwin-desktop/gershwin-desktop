@@ -329,7 +329,9 @@ build_gershwin_components() {
 
     # Build inside chroot
     chroot "${RELEASE_DIR}" sh -c "/Developer/Library/Scripts/bootstrap.sh"
-    chroot "${RELEASE_DIR}" sh -c "PINNED=1 BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh"
+    # SHALLOW=1: the image keeps the sources but not their git history, which
+    # is several hundred MB that git packs keep incompressible (see checkout.sh).
+    chroot "${RELEASE_DIR}" sh -c "SHALLOW=1 PINNED=1 BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh"
     chroot "${RELEASE_DIR}" sh -c "cd /Developer && make install"
 
     # Cleanup mounts
