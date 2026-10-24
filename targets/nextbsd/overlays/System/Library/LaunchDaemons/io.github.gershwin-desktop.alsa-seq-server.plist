@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ALSA sequencer server (audio/alsa-seq-server). It emulates /dev/snd/seq
+  through cuse(3), which the loader loads (cuse_load in loader.conf), and
+  bridges USB MIDI devices (/dev/umidi*) into the sequencer. gwmidid, the
+  per-user network MIDI daemon, and MIDI applications need it. FreeBSD
+  starts it from rc.d (alsa_seq_server_enable); launchd never reads rc.d,
+  so it runs here as a LaunchDaemon, with the arguments of the port's rc
+  script except -B: launchd tracks the process itself, so it must stay in
+  the foreground instead of going to the background.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.gershwin-desktop.alsa-seq-server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/sbin/alsa-seq-server</string>
+        <string>-F</string>
+        <string>umidi</string>
+        <string>-i</string>
+        <string>8</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/alsa-seq-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/alsa-seq-server.log</string>
+</dict>
+</plist>

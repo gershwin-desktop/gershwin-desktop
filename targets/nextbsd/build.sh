@@ -536,6 +536,11 @@ mfsroot_type="md_image"
 mfsroot_name="/boot/mfsroot.img"
 init_path="/init"
 vfs.root.mountfrom="ufs:/dev/md0"
+# cuse(3) for alsa-seq-server, the ALSA sequencer (/dev/snd/seq) that
+# gwmidid and MIDI applications use. On FreeBSD its rc script loads it;
+# launchd runs no rc scripts and the kld* tools are gone, so the loader
+# brings it in.
+cuse_load="YES"
 LIVEEOF
 cp "$WORK/rootfs.uzip" "$ISOROOT/rootfs.uzip"
 

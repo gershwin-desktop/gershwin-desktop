@@ -57,3 +57,10 @@ setxkbmap
 
 # Needed for Mouse prefPane
 xinput
+
+# ALSA sequencer for gwmidid (network MIDI) and MIDI applications:
+# alsa-seq-server provides /dev/snd/seq through cuse and bridges USB MIDI
+# devices into it; alsa-utils brings aconnect and aseqdump.
+alsa-lib
+alsa-seq-server
+alsa-utils

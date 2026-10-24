@@ -1,3 +1,6 @@
+alsa-lib
+alsa-seq-server
+alsa-utils
 autoconf
 automake
 automount
