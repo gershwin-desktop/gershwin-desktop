@@ -3,7 +3,7 @@
 <!--
   ALSA sequencer server (audio/alsa-seq-server). It emulates /dev/snd/seq
   through cuse(3), which the loader loads (cuse_load in loader.conf), and
-  bridges USB MIDI devices (/dev/umidi*) into the sequencer. gwmidid, the
+  bridges USB MIDI devices (/dev/umidi*) into the sequencer. networkmidid, the
   per-user network MIDI daemon, and MIDI applications need it. FreeBSD
   starts it from rc.d (alsa_seq_server_enable); launchd never reads rc.d,
   so it runs here as a LaunchDaemon, with the arguments of the port's rc
