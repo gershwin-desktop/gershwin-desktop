@@ -86,6 +86,21 @@ CONF
 export ASSUME_ALWAYS_YES=yes IGNORE_OSVERSION=yes
 export ABI="$PKG_ABI" OSVERSION="$(uname -K)"
 PKG="pkg -r $ROOTFS -o REPOS_DIR=$NBREPO"
+
+# Darwin /private layout BEFORE anything is installed: etc, var and tmp are
+# relative symlinks into private/ from the start, as on Darwin. pkg's database
+# and cache then land in private/var through /var, and a package that ships
+# /private/... (NextBSD-userland ships /private/var/log/com.apple.launchd)
+# lands in the same directories. Laying the tree first and moving var into
+# private/ afterwards nested it as private/var/var once a package had created
+# private/var, which stranded the NextBSD package database there: the chroot's
+# later pkg runs started a fresh database, and the eviction check below then
+# reported every NextBSD-* package missing (same fix as nextbsd/nextbsd#544).
+mkdir -p "$ROOTFS/private/etc" "$ROOTFS/private/var" "$ROOTFS/private/tmp"
+for _pd in etc var tmp; do
+    ln -s "private/$_pd" "$ROOTFS/$_pd"
+done
+
 $PKG update -f
 $PKG install -y NextBSD-everything
 [ -x "$ROOTFS/sbin/launchd" ] || { echo "ERROR: NextBSD-everything install produced no /sbin/launchd" >&2; exit 1; }
@@ -115,21 +130,12 @@ assert_pkgs_installed() {
 }
 
 # ---------------------------------------------------------------------------
-# 2. Apple /private layout + runtime skeleton, then seed the pkg-free /etc.
-#    The package ships /private/etc but NOT the /etc,/var,/tmp -> private
-#    symlinks; create them, then lay the admin-owned /etc from nextbsd-overlays
-#    (NOT package-owned, so `pkg upgrade` never clobbers accounts/SSH/PAM).
+# 2. Runtime skeleton, then seed the pkg-free /etc. (The /etc,/var,/tmp ->
+#    private symlinks are laid in step 1, before pkg installs anything.) Lay
+#    the admin-owned /etc from nextbsd-overlays (NOT package-owned, so
+#    `pkg upgrade` never clobbers accounts/SSH/PAM).
 # ---------------------------------------------------------------------------
-echo "==> Apple /private layout + nextbsd-overlays /etc seed"
-mkdir -p "$ROOTFS/private"
-for _pd in etc var tmp; do
-    if [ -d "$ROOTFS/$_pd" ] && [ ! -L "$ROOTFS/$_pd" ]; then
-        mv "$ROOTFS/$_pd" "$ROOTFS/private/$_pd"
-    else
-        mkdir -p "$ROOTFS/private/$_pd"
-    fi
-    ln -s "private/$_pd" "$ROOTFS/$_pd"
-done
+echo "==> nextbsd-overlays /etc seed (the /private layout was laid in step 1, before pkg)"
 
 OVL="$WORK/nextbsd-overlays"
 rm -rf "$OVL"
