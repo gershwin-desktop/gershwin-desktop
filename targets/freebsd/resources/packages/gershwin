@@ -1,3 +1,6 @@
+alsa-lib
+alsa-seq-server
+alsa-utils
 autoconf
 automake
 automount
@@ -35,7 +38,6 @@ gmake
 gmp
 gnutls
 icu
-ImageMagick7
 jbigkit
 jpeg-turbo
 lerc

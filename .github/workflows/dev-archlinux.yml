@@ -138,10 +138,12 @@ jobs:
           arch: amd64
           soft-fail: true
 
+  # A dev run publishes too, so fixes that land on dev first reach the
+  # release without waiting for a release to main; the last run wins.
   publish:
     name: publish archlinux-dev
     needs: [build, test]
-    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && needs.build.result == 'success' && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

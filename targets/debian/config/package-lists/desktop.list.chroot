@@ -1,7 +1,10 @@
 curl
 lsb-release
 tar
+# bsdtar, which LoginWindow uses to unpack the on-demand CJK font
+libarchive-tools
 sudo
+libnss-myhostname
 xterm
 git
 wget

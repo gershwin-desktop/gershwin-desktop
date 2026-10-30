@@ -98,10 +98,13 @@ jobs:
           arch: amd64
           soft-fail: true
 
+  # A dev run publishes too: the size and other fixes land on dev first, and
+  # the freebsd-dev release should carry an ISO built from them without
+  # waiting for a release to main. Whichever branch ran last wins the asset.
   publish:
     name: publish freebsd-dev
     needs: [build, test]
-    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test.result == 'success' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && needs.build.result == 'success' && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

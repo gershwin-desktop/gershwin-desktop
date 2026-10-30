@@ -86,26 +86,56 @@ CONF
 export ASSUME_ALWAYS_YES=yes IGNORE_OSVERSION=yes
 export ABI="$PKG_ABI" OSVERSION="$(uname -K)"
 PKG="pkg -r $ROOTFS -o REPOS_DIR=$NBREPO"
+
+# Darwin /private layout BEFORE anything is installed: etc, var and tmp are
+# relative symlinks into private/ from the start, as on Darwin. pkg's database
+# and cache then land in private/var through /var, and a package that ships
+# /private/... (NextBSD-userland ships /private/var/log/com.apple.launchd)
+# lands in the same directories. Laying the tree first and moving var into
+# private/ afterwards nested it as private/var/var once a package had created
+# private/var, which stranded the NextBSD package database there: the chroot's
+# later pkg runs started a fresh database, and the eviction check below then
+# reported every NextBSD-* package missing (same fix as nextbsd/nextbsd#544).
+mkdir -p "$ROOTFS/private/etc" "$ROOTFS/private/var" "$ROOTFS/private/tmp"
+for _pd in etc var tmp; do
+    ln -s "private/$_pd" "$ROOTFS/$_pd"
+done
+
 $PKG update -f
 $PKG install -y NextBSD-everything
 [ -x "$ROOTFS/sbin/launchd" ] || { echo "ERROR: NextBSD-everything install produced no /sbin/launchd" >&2; exit 1; }
 
-# ---------------------------------------------------------------------------
-# 2. Apple /private layout + runtime skeleton, then seed the pkg-free /etc.
-#    The package ships /private/etc but NOT the /etc,/var,/tmp -> private
-#    symlinks; create them, then lay the admin-owned /etc from nextbsd-overlays
-#    (NOT package-owned, so `pkg upgrade` never clobbers accounts/SSH/PAM).
-# ---------------------------------------------------------------------------
-echo "==> Apple /private layout + nextbsd-overlays /etc seed"
-mkdir -p "$ROOTFS/private"
-for _pd in etc var tmp; do
-    if [ -d "$ROOTFS/$_pd" ] && [ ! -L "$ROOTFS/$_pd" ]; then
-        mv "$ROOTFS/$_pd" "$ROOTFS/private/$_pd"
-    else
-        mkdir -p "$ROOTFS/private/$_pd"
+# Record exactly what NextBSD-everything laid down, so the pre-makefs check below
+# can prove none of it was evicted by the later Gershwin/pkglist.txt transactions.
+# Taken from the rootfs pkg db instead of a hardcoded list so it follows the
+# package set (arch-specific packages such as the amd64 kexts included).
+BASE_PKGS="$WORK/base-packages.txt"
+pkg -r "$ROOTFS" query '%n' | sort > "$BASE_PKGS"
+[ -s "$BASE_PKGS" ] || { echo "ERROR: NextBSD-everything install registered no packages" >&2; exit 1; }
+
+# Fail the build if any package in the given list is no longer registered in the
+# rootfs pkg db. Later pkg transactions run with ASSUME_ALWAYS_YES, so a file
+# conflict with a newly pulled-in port silently deinstalls the base package that
+# co-owns the path (once shipped an ISO without the kexts, green CI).
+assert_pkgs_installed() {
+    _missing=""
+    while read -r _p; do
+        pkg -r "$ROOTFS" info -e "$_p" || _missing="$_missing $_p"
+    done < "$1"
+    if [ -n "$_missing" ]; then
+        echo "ERROR: packages evicted from the rootfs during the build (pkg file conflict under ASSUME_ALWAYS_YES?):" >&2
+        for _p in $_missing; do echo "  $_p" >&2; done
+        exit 1
     fi
-    ln -s "private/$_pd" "$ROOTFS/$_pd"
-done
+}
+
+# ---------------------------------------------------------------------------
+# 2. Runtime skeleton, then seed the pkg-free /etc. (The /etc,/var,/tmp ->
+#    private symlinks are laid in step 1, before pkg installs anything.) Lay
+#    the admin-owned /etc from nextbsd-overlays (NOT package-owned, so
+#    `pkg upgrade` never clobbers accounts/SSH/PAM).
+# ---------------------------------------------------------------------------
+echo "==> nextbsd-overlays /etc seed (the /private layout was laid in step 1, before pkg)"
 
 OVL="$WORK/nextbsd-overlays"
 rm -rf "$OVL"
@@ -194,6 +224,8 @@ fi
 #    FreeBSD repo configured in step 3.
 # ---------------------------------------------------------------------------
 echo "==> chroot build: Gershwin -> /System"
+# SHALLOW=1: the image keeps the sources but not their git history, which is
+# several hundred MB that git packs keep incompressible (see checkout.sh).
 mount -t devfs devfs "$ROOTFS/dev"
 cp /etc/resolv.conf "$ROOTFS/private/etc/resolv.conf"
 chroot "$ROOTFS" /bin/sh -eu -c '
@@ -201,7 +233,7 @@ chroot "$ROOTFS" /bin/sh -eu -c '
     git clone --depth 1 -b '"$GERSHWIN_REF"' '"$GERSHWIN_REPO"' /Developer
     cd /Developer
     sh Library/Scripts/bootstrap.sh
-    BRANCH='"$GERSHWIN_BRANCH"' sh Library/Scripts/checkout.sh
+    SHALLOW=1 BRANCH='"$GERSHWIN_BRANCH"' sh Library/Scripts/checkout.sh
     make install
 '
 [ -d "$ROOTFS/System/Library" ] || { echo "ERROR: /System was not produced" >&2; exit 1; }
@@ -311,6 +343,15 @@ rm -f "$ROOTFS/sbin/kldload" "$ROOTFS/sbin/kldunload" "$ROOTFS/sbin/kldstat" \
 # root-owned (pkg -r, chroot, and the overlay clones/cp all run as root here).
 echo "==> normalising launchd overlay ownership to root:wheel"
 chown -R 0:0 "$ROOTFS/System/Library/LaunchDaemons"
+
+# Last chance to catch a package evicted by the Gershwin build or pkglist.txt;
+# pkglist.txt entries must have survived the Gershwin build as well.
+echo "==> asserting base and pkglist.txt packages survived the build"
+assert_pkgs_installed "$BASE_PKGS"
+if [ -f "$CWD/pkglist.txt" ]; then
+    sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$CWD/pkglist.txt" > "$WORK/pkglist-names.txt"
+    assert_pkgs_installed "$WORK/pkglist-names.txt"
+fi
 
 # ---------------------------------------------------------------------------
 # 8-10. Repackage as a live ISO (nextbsd build.sh step 7 model, verbatim).
@@ -503,6 +544,11 @@ mfsroot_type="md_image"
 mfsroot_name="/boot/mfsroot.img"
 init_path="/init"
 vfs.root.mountfrom="ufs:/dev/md0"
+# cuse(3) for alsa-seq-server, the ALSA sequencer (/dev/snd/seq) that
+# networkmidid and MIDI applications use. On FreeBSD its rc script loads it;
+# launchd runs no rc scripts and the kld* tools are gone, so the loader
+# brings it in.
+cuse_load="YES"
 LIVEEOF
 cp "$WORK/rootfs.uzip" "$ISOROOT/rootfs.uzip"
 

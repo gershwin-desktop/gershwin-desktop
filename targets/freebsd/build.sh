@@ -100,6 +100,24 @@ error() {
     exit 1
 }
 
+# Fail the build if any package named in the given list is no longer registered
+# in the rootfs pkg db. Later pkg transactions run with ASSUME_ALWAYS_YES, so a
+# file conflict with a newly pulled-in package silently deinstalls the package
+# that co-owns the path and the ISO ships without it while CI stays green.
+# Same check as targets/nextbsd/build.sh (no shared script location exists).
+assert_pkgs_installed() {
+    _missing=""
+    while read -r _p; do
+        [ -n "${_p}" ] || continue
+        pkg_cmd -r "${RELEASE_DIR}" info -e "${_p}" || _missing="${_missing} ${_p}"
+    done < "$1"
+    if [ -n "${_missing}" ]; then
+        echo "ERROR: packages evicted from the rootfs during the build (pkg file conflict under ASSUME_ALWAYS_YES?):" >&2
+        for _p in ${_missing}; do echo "  ${_p}" >&2; done
+        exit 1
+    fi
+}
+
 # --- Initialization ---
 [ "$(id -u)" -eq 0 ] || error "This script must be run as root."
 
@@ -259,6 +277,7 @@ loginwindow_enable="YES"
 webcamd_enable="YES"
 cupsd_enable="YES"
 avahi_daemon_enable="YES"
+alsa_seq_server_enable="YES"
 avahi_dnsconfd_enable="YES"
 ntpd_enable="YES"
 ntpd_sync_on_start="YES"
@@ -310,7 +329,9 @@ build_gershwin_components() {
 
     # Build inside chroot
     chroot "${RELEASE_DIR}" sh -c "/Developer/Library/Scripts/bootstrap.sh"
-    chroot "${RELEASE_DIR}" sh -c "PINNED=1 BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh"
+    # SHALLOW=1: the image keeps the sources but not their git history, which
+    # is several hundred MB that git packs keep incompressible (see checkout.sh).
+    chroot "${RELEASE_DIR}" sh -c "SHALLOW=1 PINNED=1 BRANCH=\"${GERSHWIN_BRANCH}\" /Developer/Library/Scripts/checkout.sh"
     chroot "${RELEASE_DIR}" sh -c "cd /Developer && make install"
 
     # Cleanup mounts
@@ -419,6 +440,12 @@ generate_iso() {
     # /etc/pkg/FreeBSD.conf). NOTE: local.sqlite -- the installed-package
     # registry -- also lives in PKG_DBDIR and MUST stay; only repos/ goes.
     rm -rf "${RELEASE_DIR}/var/db/pkg/repos"
+    # Last chance to catch a package evicted by the pkgbase set or the Gershwin
+    # transactions: installed_pkg.txt is the snapshot taken right after the base
+    # install, filtered_pkg.txt the Gershwin/driver packages requested later.
+    log "Asserting base and Gershwin packages survived the build..."
+    assert_pkgs_installed "${WORKDIR}/installed_pkg.txt"
+    assert_pkgs_installed "${WORKDIR}/filtered_pkg.txt"
     # --- ISO SIZE REPORT (exact, uncompressed): every installed package by
     #     flatsize + the biggest directories that ship in the rootfs. This is the
     #     ground truth for what inflates the image (the pkg logs only show

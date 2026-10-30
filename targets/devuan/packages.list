@@ -44,7 +44,11 @@ dhcpcd
 
 # Core utilities
 sudo
+# Resolves whatever hostname is set at runtime, so sudo does not fail after a rename
+libnss-myhostname
 curl
+# bsdtar, which LoginWindow uses to unpack the on-demand CJK font
+libarchive-tools
 wget
 git
 make
