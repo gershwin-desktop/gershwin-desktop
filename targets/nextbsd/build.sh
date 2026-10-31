@@ -158,6 +158,12 @@ mkdir -p "$ROOTFS/root"; chmod 0700 "$ROOTFS/root"
 # 3. Regenerate /etc databases + configure pkg repos in the SHIPPED image so
 #    the Gershwin chroot build (and a user later) can `pkg install` out of the
 #    box. Two repos: FreeBSD ports (Gershwin's deps) + the NextBSD flat repo.
+#    NextBSD itself no longer configures FreeBSD's repo (nextbsd-kernel#376),
+#    and its own packages move to the ABI NextBSD:<major>:<arch>, so every
+#    FreeBSD pkg call below runs as $FREEBSD_PKG: FreeBSD's ABI in its
+#    environment only, and the FreeBSD repo named with -r. Gershwin's
+#    bootstrap.sh replaces this FreeBSD.conf with its own (signed, disabled,
+#    used only with -r); the -r keeps step 6 working either way.
 # ---------------------------------------------------------------------------
 echo "==> regenerate /etc databases + configure image pkg repos"
 chown -RH 0:0 "$ROOTFS/etc" 2>/dev/null || true
@@ -181,10 +187,10 @@ NextBSD: {
   signature_type: none,
 }
 CONF
-cat > "$ROOTFS/usr/local/etc/pkg.conf" <<CONF
-ABI = "FreeBSD:15:${ABIARCH}";
-IGNORE_OSVERSION = yes;
-CONF
+# No /usr/local/etc/pkg.conf: NextBSD's pkg reads /private/etc/pkg.conf, and
+# FreeBSD's ABI is not pinned system-wide (it would hide NextBSD's packages).
+# OSVERSION only stops pkg from warning that it is guessing one for ABI.
+FREEBSD_PKG="env ABI=FreeBSD:15:${ABIARCH} OSVERSION=1501000 IGNORE_OSVERSION=yes pkg install -y -r FreeBSD"
 
 # ---------------------------------------------------------------------------
 # 4. Version identity — the SAME /etc/os-release nextbsd-redux/nextbsd build.sh
@@ -229,7 +235,7 @@ echo "==> chroot build: Gershwin -> /System"
 mount -t devfs devfs "$ROOTFS/dev"
 cp /etc/resolv.conf "$ROOTFS/private/etc/resolv.conf"
 chroot "$ROOTFS" /bin/sh -eu -c '
-    pkg install -y git
+    '"$FREEBSD_PKG"' git
     git clone --depth 1 -b '"$GERSHWIN_REF"' '"$GERSHWIN_REPO"' /Developer
     cd /Developer
     sh Library/Scripts/bootstrap.sh
@@ -246,13 +252,13 @@ chroot "$ROOTFS" /bin/sh -eu -c '
 #    rebuilt from packages), so the desktop can't start without this. Installed
 #    IN THE CHROOT (devfs + resolv.conf still present from step 5) so each
 #    package's post-install scripts run natively; pkg resolves the full closure
-#    from the FreeBSD repo configured in step 3.
+#    from the FreeBSD repo configured in step 3 (as $FREEBSD_PKG, see there).
 # ---------------------------------------------------------------------------
 if [ -f "$CWD/pkglist.txt" ]; then
     EXTRA_PKGS=$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$CWD/pkglist.txt" | tr '\n' ' ')
     if [ -n "$EXTRA_PKGS" ]; then
         echo "==> installing pkglist.txt runtime prerequisites: $EXTRA_PKGS"
-        chroot "$ROOTFS" /bin/sh -eu -c "pkg install -y $EXTRA_PKGS"
+        chroot "$ROOTFS" /bin/sh -eu -c "$FREEBSD_PKG $EXTRA_PKGS"
     fi
 fi
 
