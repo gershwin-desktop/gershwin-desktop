@@ -48,7 +48,12 @@ ISO_NAME="gershwin-on-${FLAVOR}-${CHANNEL:+${CHANNEL}-}${IMG_DATE}-${ARCH_LABEL}
 
 # pkg uses `aarch64` for 64-bit ARM; release tags / artifact names use `arm64`.
 case "$ARCH" in arm64|aarch64) ABIARCH=aarch64 ;; *) ABIARCH="$ARCH" ;; esac
-PKG_ABI="FreeBSD:15:${ABIARCH}"
+# NextBSD's package ABI (nextbsd/nextbsd-kernel#376): every NextBSD-* package
+# and the NextBSD catalogue carry NextBSD:27:<arch> (aarch64 on arm64) and
+# OSVERSION 2700000. Gershwin's FreeBSD packages keep FreeBSD's ABI
+# ($FREEBSD_PKG, step 3).
+NBOSVERSION=2700000
+PKG_ABI="NextBSD:$((NBOSVERSION / 100000)):${ABIARCH}"
 # nextbsd-pkg flat repo: per-arch rolling release tag (continuous-<arch>).
 PKG_REPO_URL="https://github.com/nextbsd-redux/nextbsd-pkg/releases/download/continuous-${ARCH}"
 
@@ -81,11 +86,33 @@ NextBSD: {
 }
 CONF
 
-# ABI=FreeBSD:15:<arch>; OSVERSION is required when ABI is set (VM kernel value
-# is right); IGNORE_OSVERSION so the rolling snapshot's stamp doesn't gate.
-export ASSUME_ALWAYS_YES=yes IGNORE_OSVERSION=yes
-export ABI="$PKG_ABI" OSVERSION="$(uname -K)"
-PKG="pkg -r $ROOTFS -o REPOS_DIR=$NBREPO"
+# NextBSD's pkg-static, not the build VM's pkg: only NextBSD's pkg knows the
+# NextBSD ABI (FreeBSD's pkg stops at "Unknown OS 'NextBSD'"). It is the tool
+# nextbsd-pkg builds the repository with: nextbsd-contrib's `continuous` pkg
+# artifact for the build host's arch. A static binary, built against the
+# releng/15.1 base, so the VM must be FreeBSD 15.1 or newer. NextBSD's pkg
+# reads /private/etc/pkg.conf and /private/etc/pkg/, which the VM doesn't
+# have, so it gets an explicit empty config (-C) and the isolated repo
+# directory (-R).
+NBTOOL="$WORK/nbpkg"; mkdir -p "$NBTOOL/root"
+fetch -o "$NBTOOL/pkg.tar.gz" \
+    "https://github.com/nextbsd/nextbsd-contrib/releases/download/continuous/nextbsd-contrib-pkg-$(uname -m).tar.gz"
+tar -C "$NBTOOL/root" -xzf "$NBTOOL/pkg.tar.gz" ./usr/sbin/pkg-static
+: > "$NBTOOL/pkg.conf"
+NBPKG="$NBTOOL/root/usr/sbin/pkg-static -C $NBTOOL/pkg.conf -R $NBREPO -r $ROOTFS"
+
+# $PKG is every host-side pkg run on the rootfs (the NextBSD-everything
+# install and the package-database checks). The NextBSD ABI goes in its
+# environment only (with -r, pkg would otherwise derive it from the root):
+# ABI=NextBSD:27:<arch>, and OSVERSION=2700000, which pkg requires when ABI is
+# set and which every NextBSD package carries. It is not exported, so the
+# chroot's FreeBSD installs ($FREEBSD_PKG) set FreeBSD's ABI themselves. For
+# arm64, aarch64 packages are cross-installed in the x86 VM; nothing from them
+# is executed.
+export ASSUME_ALWAYS_YES=yes
+PKG="env ABI=$PKG_ABI OSVERSION=$NBOSVERSION $NBPKG"
+_tabi=$($PKG config ABI) || _tabi=
+[ "$_tabi" = "$PKG_ABI" ] || { echo "ERROR: nextbsd-contrib's pkg-static does not know the ABI ${PKG_ABI} (got '${_tabi}')" >&2; exit 1; }
 
 # Darwin /private layout BEFORE anything is installed: etc, var and tmp are
 # relative symlinks into private/ from the start, as on Darwin. pkg's database
@@ -110,7 +137,7 @@ $PKG install -y NextBSD-everything
 # Taken from the rootfs pkg db instead of a hardcoded list so it follows the
 # package set (arch-specific packages such as the amd64 kexts included).
 BASE_PKGS="$WORK/base-packages.txt"
-pkg -r "$ROOTFS" query '%n' | sort > "$BASE_PKGS"
+$PKG query '%n' | sort > "$BASE_PKGS"
 [ -s "$BASE_PKGS" ] || { echo "ERROR: NextBSD-everything install registered no packages" >&2; exit 1; }
 
 # Fail the build if any package in the given list is no longer registered in the
@@ -120,7 +147,7 @@ pkg -r "$ROOTFS" query '%n' | sort > "$BASE_PKGS"
 assert_pkgs_installed() {
     _missing=""
     while read -r _p; do
-        pkg -r "$ROOTFS" info -e "$_p" || _missing="$_missing $_p"
+        $PKG info -e "$_p" || _missing="$_missing $_p"
     done < "$1"
     if [ -n "$_missing" ]; then
         echo "ERROR: packages evicted from the rootfs during the build (pkg file conflict under ASSUME_ALWAYS_YES?):" >&2
