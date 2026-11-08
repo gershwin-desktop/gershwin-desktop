@@ -131,6 +131,15 @@ done
 $PKG update -f
 $PKG install -y NextBSD-everything
 [ -x "$ROOTFS/sbin/launchd" ] || { echo "ERROR: NextBSD-everything install produced no /sbin/launchd" >&2; exit 1; }
+# The grey boot splash: NextBSD-bootloader-gershwin ships only
+# /boot/loader.conf.d/bootsplash.conf with bootsplash_style="grey" (#5F6770,
+# LoginWindow's root colour), so the splash hands over to the greeter with an
+# exact match. Without it the loader and kernel use the built-in black style.
+# It is a NextBSD package, so it comes from the NextBSD repo here ($PKG), not
+# from pkglist.txt (FreeBSD repo). Installed before BASE_PKGS is recorded, so
+# the eviction check below covers it, and step 8 copies /boot onto the ISO.
+$PKG install -y NextBSD-bootloader-gershwin
+[ -f "$ROOTFS/boot/loader.conf.d/bootsplash.conf" ] || { echo "ERROR: NextBSD-bootloader-gershwin installed no /boot/loader.conf.d/bootsplash.conf" >&2; exit 1; }
 
 # Record exactly what NextBSD-everything laid down, so the pre-makefs check below
 # can prove none of it was evicted by the later Gershwin/pkglist.txt transactions.
@@ -291,15 +300,16 @@ fi
 
 # ---------------------------------------------------------------------------
 # 7. Gershwin launchd overlay: loginwindow/dshelper/gdomap + the D-Bus system
-#    bus (keep base getty as a rescue console on the other VTs).
+#    bus (base getty stays, and yields the VT to loginwindow).
 # ---------------------------------------------------------------------------
 echo "==> applying Gershwin launchd overlay (loginwindow alongside getty)"
 cp -aR "$CWD/overlays/." "$ROOTFS/"
-# Keep NextBSD's base getty job (com.apple.getty.plist). launchd is PID 1 and
-# does not read /etc/ttys, so loginwindow is the only login path once getty is
-# removed -- if the greeter/X dies there is no console login on any VT and the
-# machine is reachable only via SSH. Retaining getty leaves a text rescue
-# console on the other VTs. loginwindow stays the primary GUI greeter.
+# Keep NextBSD's base getty job (org.nextbsd.getty). launchd is PID 1 and does
+# not read /etc/ttys. On a serial console (comconsole or boot_serial=YES) it
+# runs getty on the serial port. Otherwise it waits while
+# io.github.gershwin-desktop.loginwindow is loaded, so no VT getty runs at all
+# while loginwindow is up; if the greeter job is unloaded, getty takes ttyv0 as
+# the text login. loginwindow is the primary GUI greeter.
 
 # D-Bus system bus: the org.freedesktop.dbus-system LaunchDaemon (overlay) runs
 # `dbus-daemon --system` in the foreground. It needs a machine-id (generate now
@@ -511,23 +521,30 @@ export PATH LD_LIBRARY_PATH
 
 mount -t devfs devfs /dev 2>/dev/null
 exec >/dev/console 2>&1
-echo "[init] Gershwin/NextBSD live root: assembling overlay"
+# Routine progress only on verbose boots (boot -v), as the base NextBSD ISO
+# does: a normal boot shows the splash with no text. start_init() never passes
+# -v to init (only -s), so ask the kernel; -s (single-user) forces it on too.
+# Errors and the single-user banner always print.
+VERBOSE=; [ "$(sysctl -n debug.bootverbose 2>/dev/null)" != 0 ] && VERBOSE=1
+case " $* " in *" -s "*) VERBOSE=1 ;; esac
+vlog() { [ -n "$VERBOSE" ] && echo "[init] $*"; return 0; }
+vlog "Gershwin/NextBSD live root: assembling overlay"
 
 n=0
 while [ ! -e /dev/iso9660/GERSHWIN ] && [ ! -e /dev/cd0 ] && [ "$n" -lt 10 ]; do n=$((n + 1)); sleep 1; done
 for dev in /dev/iso9660/GERSHWIN /dev/cd0 /dev/cd1; do
 	[ -e "$dev" ] || continue
 	if mount -t cd9660 -o ro "$dev" /media 2>&1; then
-		echo "[init] media mounted from $dev"; break
+		vlog "media mounted from $dev"; break
 	fi
 done
-echo "[init] media: $(ls /media/rootfs.uzip 2>/dev/null || echo rootfs.uzip-MISSING)"
+if [ -e /media/rootfs.uzip ]; then vlog "media: /media/rootfs.uzip"; else echo "[init] media: rootfs.uzip-MISSING"; fi
 
 mdconfig -a -t vnode -f /media/rootfs.uzip -u 1
 n=0
 while [ ! -c /dev/md1.uzip ] && [ "$n" -lt 20 ]; do n=$((n + 1)); sleep 1; done
 mount -o ro /dev/md1.uzip /rofs
-echo "[init] rofs lower: $(ls -d /rofs/sbin 2>/dev/null || echo /rofs-EMPTY)"
+if [ -e /rofs/sbin ]; then vlog "rofs lower: /rofs/sbin"; else echo "[init] rofs lower: /rofs-EMPTY"; fi
 
 case " $* " in
 *" -s "*)
@@ -539,13 +556,21 @@ esac
 
 mount -t tmpfs tmpfs /cow
 mount_unionfs /cow /rofs
-echo "[init] union assembled; launchd: $(ls /rofs/sbin/launchd 2>/dev/null || echo launchd-MISSING)"
+if [ -e /rofs/sbin/launchd ]; then vlog "union assembled; launchd: /rofs/sbin/launchd"; else echo "[init] union assembled; launchd: launchd-MISSING"; fi
 mount -t devfs devfs /rofs/dev
 
-sysctl vfs.pivot=/rofs
-echo "[init] pivot complete; exec launchd"
+# Its "vfs.pivot: ... -> ..." line is progress (verbose only); errors still print.
+if [ -n "$VERBOSE" ]; then sysctl vfs.pivot=/rofs; else sysctl vfs.pivot=/rofs >/dev/null; fi
+vlog "pivot complete; exec launchd"
 unset LD_LIBRARY_PATH
+# Hand launchd no open console: otherwise launchd and every job without its own
+# log path inherit the console as stdio and write over the splash. launchd
+# opens the console itself on verbose boots (nextbsd/nextbsd#599).
+exec </dev/null >/dev/null 2>&1
 exec /sbin/launchd
+# exec failed: stdio now points at /dev/null, so reopen the console for the
+# message, and keep PID 1 alive.
+exec >/dev/console 2>&1
 echo "[init] FATAL: exec /sbin/launchd failed ($?)"
 while : ; do sleep 60; done
 INITEOF
