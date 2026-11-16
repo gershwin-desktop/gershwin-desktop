@@ -286,7 +286,6 @@ dsbdriverd_enable="YES"
 initgfx_enable="YES"
 initgfx_menu="NO"
 smartd_enable="YES"
-dshelper_enable="YES"
 EFS
 
     # Initialize Directory Services and create live user

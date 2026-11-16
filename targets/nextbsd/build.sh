@@ -8,7 +8,7 @@
 # and ripping its rootfs out of GPT p3. The user-editable /etc config is seeded
 # from the nextbsd-overlays repo (deliberately NOT package-owned). We then
 # chroot-build the Gershwin desktop into that rootfs, lay the Gershwin launchd
-# overlay (loginwindow/dshelper/gdomap + the D-Bus system bus) on top, and
+# overlay (loginwindow/gdomap + the D-Bus system bus) on top, and
 # repackage the result into a live ISO that boots exactly like NextBSD's own —
 # a tiny mfsroot assembles an on-demand uzip-compressed root + tmpfs/unionfs
 # overlay, then `sysctl vfs.pivot` adopts the union as / and execs launchd.
@@ -299,7 +299,7 @@ if [ -f "$CWD/pkglist.txt" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Gershwin launchd overlay: loginwindow/dshelper/gdomap + the D-Bus system
+# 7. Gershwin launchd overlay: loginwindow/gdomap + the D-Bus system
 #    bus (base getty stays, and yields the VT to loginwindow).
 # ---------------------------------------------------------------------------
 echo "==> applying Gershwin launchd overlay (loginwindow alongside getty)"
@@ -336,9 +336,10 @@ chroot "$ROOTFS" /bin/sh -c 'chown 5000:5000 /Local/Users/admin'
 # NB: create NO user account and never touch /etc/master.passwd. `dscli init`
 # above already provisioned the live 'admin' in DirectoryServices (uid/gid 5000,
 # noPassword, home /Local/Users/admin) and the greeter authenticates it via
-# dshelper/nss_gershwin. A pw(8) /etc account would be a redundant, conflicting
-# second 'admin' -- Gershwin owns the user database, so we leave it entirely to
-# dscli (which also sets the correct /Local ownership; we must not disturb it).
+# nss_gershwin, which reads the DirectoryServices plists directly. A pw(8)
+# /etc account would be a redundant, conflicting second 'admin' -- Gershwin
+# owns the user database, so we leave it entirely to dscli (which also sets
+# the correct /Local ownership; we must not disturb it).
 
 # purge the pkg cache before makefs bakes the tree in. All three install phases
 # (NextBSD-everything, Gershwin's Bootstrap.sh deps, pkglist.txt) leave the

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  GNUstep Distributed Objects port mapper (UDP/TCP 538). Required by dshelper.
+  GNUstep Distributed Objects port mapper (UDP/TCP 538). Used by GNUstep
+  Distributed Objects and by `dscli join` to find directory servers.
   -f keeps gdomap in the foreground so launchd tracks the real PID; without it
   gdomap forks, the parent exits, and KeepAlive respawn-loops on the held port.
 -->
