@@ -74,8 +74,10 @@ the container choice barely affects build time.
    ```
    { lastLoggedInUser = admin; lastSession = "/System/Library/Scripts/Gershwin.sh"; }
    ```
-   Wire `loginwindow`, `dshelper`, `gdomap`, `dbus`, `avahi` to start under the
+   Wire `loginwindow`, `gdomap`, `dbus`, `avahi` to start under the
    flavor's init system (systemd unit / sysvinit / openrc / rc.d / launchd).
+   Do not enable `dshelper`: local users come from the `nss_gershwin` module,
+   and `dscli promote` enables `dshelper` on directory servers only.
 5. **XLibre, never Xorg.** Also drop a QEMU-friendly xorg snippet so the ISO
    renders under virtio-gpu / llvmpipe (see `targets/devuan/build.sh`'s
    `20-virtio-gpu.conf` for the pattern), or the screen stays black in the gate.
@@ -134,7 +136,7 @@ Artix is Arch without systemd, so start from **archlinux**:
   `extra` overlay via Artix's `artix-archlinux-support` if you need Arch packages.
 - **Init wiring is the real work**: replace every `systemctl enable …` in
   `airootfs/root/customize_airootfs.sh` with the equivalent for Artix's init
-  (openrc / runit / s6) for `loginwindow`, `dshelper`, `gdomap`, `dbus`, `avahi`.
+  (openrc / runit / s6) for `loginwindow`, `gdomap`, `dbus`, `avahi`.
 - Keep `dscli init` + the auto-login `LoginWindow.plist` unchanged.
 - Add `rc-artix.yml` / `dev-artix.yml` from the archlinux pair; `flavor: artix`,
   tags `artix-rc`/`artix-dev`, titles `Artix (rc)`/`Artix (dev)`.

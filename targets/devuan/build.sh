@@ -237,9 +237,6 @@ chroot "${WORK}/rootfs" /bin/sh -c "
     cd /Developer && make install
 "
 
-# Enable Gershwin services for sysvinit
-chroot "${WORK}/rootfs" update-rc.d dshelper defaults 
-
 # Enable dns-sd browsing
 chroot "${WORK}/rootfs" update-rc.d avahi-daemon defaults
 
