@@ -48,7 +48,7 @@ sudo mv /Local/Library/Tools/* /System/Library/Tools || true
 dscli init
 
 # Enable services for the live session
-systemctl enable gdomap dshelper loginwindow avahi-daemon
+systemctl enable gdomap loginwindow avahi-daemon
 
 # Allow empty password for sshd
 sed -i 's/^[[:space:]#]*PermitEmptyPasswords[[:space:]]*.*/PermitEmptyPasswords yes/' /etc/ssh/sshd_config
